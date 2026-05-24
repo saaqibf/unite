@@ -1,5 +1,5 @@
 /**
- * UNite Course Compass — Full Implementation
+ * UNite Course Compass — Full Implementation v2
  * Transcript upload, semester roadmap, prereq tree, GPA simulator, AI advisor
  */
 
