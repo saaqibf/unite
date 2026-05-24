@@ -1,549 +1,697 @@
-// Onboarding flow — 5 screens: sign up, email verify, 8 questions, welcome dashboard
-// Writes unite_profile and unite_token to localStorage for all other features to read
+(function () {
+  'use strict';
 
-const API = '/api/auth';
+  var TOTAL_QUESTIONS = 8;
+  var PROFILE_KEY = 'unite_profile';
+  var INTENT_KEY = 'unite_intent';
 
-// ─── State ───────────────────────────────────────────────────────────
+  var root = document.getElementById('onboarding-root');
+  var progressWrap = document.getElementById('progress-wrap');
+  var progressFill = document.getElementById('progress-fill');
+  var progressText = document.getElementById('progress-text');
+  var progressTrack = document.querySelector('.onboarding__progress-track');
 
-let currentQuestion = 0;
-let answers = {};
-let registeredEmail = '';
-let registeredName = '';
+  var currentScreen = 0;
 
-// The 8 onboarding questions — each has a key, question text, choices, and optional multi-select
-const QUESTIONS = [
-  {
-    key: 'program',
-    text: 'What program are you in?',
-    type: 'single',
-    choices: [
-      { label: '💻 Computer Science', value: 'cs' },
-      { label: '⚙️ Software Engineering', value: 'seng' },
-      { label: '📊 Business (Haskayne)', value: 'business' },
-      { label: '🏃 Kinesiology', value: 'kinesiology' },
-      { label: '🧠 Psychology', value: 'psychology' },
-      { label: '🔬 Other Science / Arts', value: 'other' }
-    ]
-  },
-  {
-    key: 'year',
-    text: 'What year are you in?',
-    type: 'single',
-    choices: [
-      { label: 'Year 1', value: 'Year 1' },
-      { label: 'Year 2', value: 'Year 2' },
-      { label: 'Year 3', value: 'Year 3' },
-      { label: 'Year 4', value: 'Year 4' },
-      { label: 'Year 5+', value: 'Year 5+' },
-      { label: 'Graduate Student', value: 'Graduate' }
-    ]
-  },
-  {
-    key: 'has_car',
-    text: 'Do you have a car?',
-    type: 'single',
-    choices: [
-      { label: '🚗 Yes, I have a car', value: true },
-      { label: '🚌 No car — I commute or walk', value: false }
-    ]
-  },
-  {
-    key: 'housing',
-    text: 'Where do you live?',
-    type: 'single',
-    choices: [
-      { label: '🏫 On campus (residence)', value: 'on_campus' },
-      { label: '🏠 Off campus', value: 'off_campus' },
-      { label: '🚇 Commuter (travel from home)', value: 'commuter' }
-    ]
-  },
-  {
-    key: 'challenge',
-    text: "What's your biggest challenge right now?",
-    type: 'single',
-    choices: [
-      { label: '👥 Making friends and finding community', value: 'making_friends' },
-      { label: '🧭 Planning my degree and picking courses', value: 'planning_degree' },
-      { label: '📦 Finding stuff I need (textbooks, furniture)', value: 'finding_stuff' },
-      { label: '🎉 Finding things to do on campus', value: 'finding_events' }
-    ]
-  },
-  {
-    key: 'personality',
-    text: 'Are you more of an introvert or extrovert?',
-    type: 'single',
-    choices: [
-      { label: '🔋 Introvert — I recharge alone', value: 'introvert' },
-      { label: '⚡ Extrovert — I love being around people', value: 'extrovert' },
-      { label: '⚖️ Depends on the situation', value: 'ambivert' }
-    ]
-  },
-  {
-    key: 'interests',
-    text: 'What are your interests? (pick all that apply)',
-    type: 'multi',
-    choices: [
-      { label: '⚽ Sports', value: 'sports' },
-      { label: '🎵 Music', value: 'music' },
-      { label: '🎮 Gaming', value: 'gaming' },
-      { label: '📚 Study Groups', value: 'study_groups' },
-      { label: '🏔️ Outdoors', value: 'outdoors' },
-      { label: '🎨 Arts', value: 'arts' },
-      { label: '💻 Tech', value: 'tech' },
-      { label: '🍕 Food', value: 'food' }
-    ]
-  }
-];
-
-// ─── Screen helpers ───────────────────────────────────────────────────
-
-// Shows only the named screen and hides all others
-function showScreen(id) {
-  document.querySelectorAll('.ob-screen').forEach(s => s.style.display = 'none');
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'block';
-}
-
-// Updates the top progress bar based on which question we're on
-function updateProgress(step, total) {
-  const bar = document.getElementById('ob-progress-bar');
-  const prog = document.getElementById('ob-progress');
-  if (bar) bar.style.width = `${Math.round((step / total) * 100)}%`;
-  if (prog) prog.style.display = 'block';
-}
-
-// ─── Sign Up ──────────────────────────────────────────────────────────
-
-// Validates the email field live — shows green check for @ucalgary.ca
-function wireEmailValidation() {
-  const emailInput = document.getElementById('signup-email');
-  const badge = document.getElementById('email-badge');
-  const hint = document.getElementById('email-hint');
-
-  if (!emailInput) return;
-
-  emailInput.addEventListener('input', () => {
-    const val = emailInput.value.toLowerCase();
-    if (val.endsWith('@ucalgary.ca')) {
-      badge.textContent = '✅';
-      hint.textContent = 'UCalgary email verified';
-      hint.className = 'ob-field-hint ob-field-hint--ok';
-    } else if (val.includes('@') && val.length > 3) {
-      badge.textContent = '❌';
-      hint.textContent = 'UNite is for UCalgary students — use your @ucalgary.ca email';
-      hint.className = 'ob-field-hint ob-field-hint--err';
-    } else {
-      badge.textContent = '';
-      hint.textContent = '';
-      hint.className = 'ob-field-hint';
-    }
-  });
-}
-
-// Handles the Sign Up button — calls /api/auth/register, then shows verify screen
-async function handleSignup() {
-  const email = document.getElementById('signup-email')?.value.trim();
-  const name = document.getElementById('signup-name')?.value.trim();
-  const password = document.getElementById('signup-password')?.value;
-  const errorEl = document.getElementById('signup-error');
-
-  errorEl.textContent = '';
-
-  if (!email || !name || !password) {
-    errorEl.textContent = 'Please fill in all fields.';
-    return;
-  }
-  if (!email.toLowerCase().endsWith('@ucalgary.ca')) {
-    errorEl.textContent = 'UNite is for UCalgary students. Please use your @ucalgary.ca email.';
-    return;
-  }
-  if (password.length < 8) {
-    errorEl.textContent = 'Password must be at least 8 characters.';
-    return;
-  }
-
-  const btn = document.getElementById('signup-btn');
-  btn.textContent = 'Creating account…';
-  btn.disabled = true;
-
-  try {
-    const res = await fetch(`${API}/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name, primaryIntent: getIntent() })
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      errorEl.textContent = data.error || 'Registration failed. Please try again.';
-      btn.textContent = 'Join UNite →';
-      btn.disabled = false;
-      return;
-    }
-
-    registeredEmail = email;
-    registeredName = name;
-    document.getElementById('verify-email-display').textContent = email;
-    showScreen('screen-verify');
-  } catch {
-    // Demo fallback — if server is unreachable, skip to questions
-    registeredEmail = email;
-    registeredName = name;
-    proceedToQuestions();
-  }
-
-  btn.textContent = 'Join UNite →';
-  btn.disabled = false;
-}
-
-// Handles login — calls /api/auth/login, saves token, skips to welcome
-async function handleLogin() {
-  const email = document.getElementById('login-email')?.value.trim();
-  const password = document.getElementById('login-password')?.value;
-  const errorEl = document.getElementById('login-error');
-
-  errorEl.textContent = '';
-
-  if (!email || !password) {
-    errorEl.textContent = 'Please fill in all fields.';
-    return;
-  }
-
-  const btn = document.getElementById('login-btn');
-  btn.textContent = 'Logging in…';
-  btn.disabled = true;
-
-  try {
-    const res = await fetch(`${API}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      errorEl.textContent = data.error || 'Login failed. Please try again.';
-      btn.textContent = 'Log In →';
-      btn.disabled = false;
-      return;
-    }
-
-    saveSession(data.token, data.user);
-    redirectAfterLogin(data.user);
-  } catch {
-    errorEl.textContent = 'Server unavailable. Try again shortly.';
-  }
-
-  btn.textContent = 'Log In →';
-  btn.disabled = false;
-}
-
-// ─── Questions ────────────────────────────────────────────────────────
-
-// Moves from verify/signup screen to the first onboarding question
-function proceedToQuestions() {
-  currentQuestion = 0;
-  answers = { name: registeredName, email: registeredEmail };
-  showScreen('screen-questions');
-  renderQuestion(0);
-  updateProgress(1, QUESTIONS.length + 1);
-}
-
-// Renders the question at the given index into the question screen
-function renderQuestion(idx) {
-  const q = QUESTIONS[idx];
-  if (!q) {
-    finishOnboarding();
-    return;
-  }
-
-  document.getElementById('q-step-label').textContent = `Question ${idx + 1} of ${QUESTIONS.length}`;
-  document.getElementById('q-text').textContent = q.text;
-  document.getElementById('q-error').textContent = '';
-
-  const choicesEl = document.getElementById('q-choices');
-  choicesEl.innerHTML = '';
-
-  if (q.type === 'text') {
-    const input = document.createElement('input');
-    input.className = 'input-field ob-text-input';
-    input.id = 'q-text-input';
-    input.placeholder = q.placeholder || '';
-    input.value = answers[q.key] || '';
-    choicesEl.appendChild(input);
-    return;
-  }
-
-  const currentVal = answers[q.key];
-  const isMulti = q.type === 'multi';
-
-  q.choices.forEach(choice => {
-    const btn = document.createElement('button');
-    btn.className = 'ob-choice' + (isMulti ? ' ob-choice--multi' : '');
-    btn.textContent = choice.label;
-    btn.dataset.value = String(choice.value);
-
-    const isSelected = isMulti
-      ? Array.isArray(currentVal) && currentVal.includes(choice.value)
-      : currentVal === choice.value;
-
-    if (isSelected) btn.classList.add('ob-choice--selected');
-
-    btn.addEventListener('click', () => {
-      if (isMulti) {
-        btn.classList.toggle('ob-choice--selected');
-      } else {
-        choicesEl.querySelectorAll('.ob-choice').forEach(b => b.classList.remove('ob-choice--selected'));
-        btn.classList.add('ob-choice--selected');
-      }
-    });
-
-    choicesEl.appendChild(btn);
-  });
-
-  const backBtn = document.getElementById('q-back-btn');
-  if (backBtn) backBtn.style.visibility = idx === 0 ? 'hidden' : 'visible';
-}
-
-// Reads the current question's selected answer and saves it to the answers object
-function saveCurrentAnswer() {
-  const q = QUESTIONS[currentQuestion];
-  if (!q) return true;
-
-  const choicesEl = document.getElementById('q-choices');
-  const errorEl = document.getElementById('q-error');
-
-  if (q.type === 'text') {
-    const val = document.getElementById('q-text-input')?.value.trim();
-    if (!val) { errorEl.textContent = 'Please enter an answer.'; return false; }
-    answers[q.key] = val;
-    return true;
-  }
-
-  if (q.type === 'multi') {
-    const selected = [...choicesEl.querySelectorAll('.ob-choice--selected')]
-      .map(b => {
-        const raw = b.dataset.value;
-        return raw === 'true' ? true : raw === 'false' ? false : raw;
-      });
-    if (selected.length === 0) { errorEl.textContent = 'Pick at least one.'; return false; }
-    answers[q.key] = selected;
-    return true;
-  }
-
-  const selected = choicesEl.querySelector('.ob-choice--selected');
-  if (!selected) { errorEl.textContent = 'Please pick an option.'; return false; }
-  const raw = selected.dataset.value;
-  answers[q.key] = raw === 'true' ? true : raw === 'false' ? false : raw;
-  return true;
-}
-
-// ─── Finish ───────────────────────────────────────────────────────────
-
-// Saves the completed profile to localStorage and the server, then shows welcome screen
-async function finishOnboarding() {
-  const profile = {
-    name: registeredName,
-    email: registeredEmail,
-    program: answers.program || 'cs',
-    year: answers.year || 'Year 1',
-    has_car: answers.has_car === true,
-    housing: answers.housing || 'off_campus',
-    challenge: answers.challenge || 'planning_degree',
-    personality: answers.personality || 'ambivert',
-    interests: answers.interests || [],
-    primary_intent: getIntent(),
+  var profile = {
+    name: '',
+    email: '',
+    program: '',
+    year: '',
+    has_car: null,
+    housing: '',
+    challenge: '',
+    personality: '',
+    interests: [],
+    primary_intent: localStorage.getItem(INTENT_KEY) || '',
     needed_courses: []
   };
 
-  localStorage.setItem('unite_profile', JSON.stringify(profile));
+  var programs = [
+    'Computer Science',
+    'Software Engineering',
+    'Electrical Engineering',
+    'Business',
+    'Kinesiology',
+    'Psychology',
+    'Nursing',
+    'Biological Sciences',
+    'Other'
+  ];
 
-  // Try to save to server (non-blocking)
-  const token = localStorage.getItem('unite_token');
-  if (token) {
-    fetch(`${API}/onboarding`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(profile)
-    }).catch(() => {});
+  var years = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5+', 'Graduate'];
+
+  var challenges = [
+    'Making friends',
+    'Planning my degree',
+    'Finding stuff I need',
+    'Finding things to do'
+  ];
+
+  var personalities = ['Introvert', 'Extrovert', 'Depends'];
+
+  var housingOptions = ['On campus', 'Off campus', 'Commuter'];
+
+  var interestOptions = [
+    'Sports',
+    'Music',
+    'Gaming',
+    'Study Groups',
+    'Outdoors',
+    'Arts',
+    'Tech',
+    'Food',
+    'Other'
+  ];
+
+  /**
+   * Checks whether an email belongs to a UCalgary student.
+   */
+  function isUcalgaryEmail(email) {
+    return email.trim().toLowerCase().endsWith('@ucalgary.ca');
   }
 
-  renderWelcomeScreen(profile);
-  showScreen('screen-welcome');
-  document.getElementById('ob-progress').style.display = 'none';
-}
-
-// Renders the personalised welcome screen with 3 feature cards based on the student's answers
-function renderWelcomeScreen(profile) {
-  const nameEl = document.getElementById('welcome-name');
-  const avatarEl = document.getElementById('welcome-avatar');
-  const subEl = document.getElementById('welcome-sub');
-  const cardsEl = document.getElementById('welcome-cards');
-
-  if (nameEl) nameEl.textContent = profile.name || 'there';
-  if (avatarEl) avatarEl.textContent = (profile.name || 'U').charAt(0).toUpperCase();
-
-  // Personalise the subtitle based on challenge
-  const subs = {
-    planning_degree: 'Your Course Compass roadmap is ready.',
-    finding_stuff: 'We found listings near your campus.',
-    making_friends: 'Here\'s what\'s happening on campus.',
-    finding_events: 'Events that match your interests are waiting.'
-  };
-  if (subEl) subEl.textContent = subs[profile.challenge] || 'Here\'s what we found for you.';
-
-  // Always show 3 personalised feature cards
-  const cards = buildWelcomeCards(profile);
-  cardsEl.innerHTML = '';
-  cards.forEach(card => {
-    const a = document.createElement('a');
-    a.href = card.href;
-    a.className = 'ob-welcome-card';
-    a.innerHTML = `
-      <span class="ob-welcome-card__icon">${card.icon}</span>
-      <div class="ob-welcome-card__text">
-        <strong>${card.title}</strong>
-        <span>${card.desc}</span>
-      </div>
-    `;
-    cardsEl.appendChild(a);
-  });
-}
-
-// Returns 3 personalised feature card configs based on the student's profile
-function buildWelcomeCards(profile) {
-  const challenge = profile.challenge;
-
-  const allCards = {
-    compass: {
-      icon: '🧭',
-      title: 'Your Degree Roadmap',
-      desc: `${programLabel(profile.program)} · ${profile.year}`,
-      href: '/features/course-compass.html'
-    },
-    marketplace: {
-      icon: '🛒',
-      title: 'Campus Marketplace',
-      desc: profile.has_car ? 'Browse all listings' : 'Campus pickup listings near you',
-      href: '/features/marketplace.html'
-    },
-    community: {
-      icon: '🤝',
-      title: 'Community Hub',
-      desc: 'Events, clubs, and sports on campus',
-      href: '/features/community.html'
-    }
-  };
-
-  if (challenge === 'planning_degree') return [allCards.compass, allCards.marketplace, allCards.community];
-  if (challenge === 'finding_stuff') return [allCards.marketplace, allCards.compass, allCards.community];
-  return [allCards.community, allCards.compass, allCards.marketplace];
-}
-
-// Returns a human-readable program name from its key
-function programLabel(key) {
-  const labels = {
-    cs: 'Computer Science',
-    seng: 'Software Engineering',
-    business: 'Business (Haskayne)',
-    kinesiology: 'Kinesiology',
-    psychology: 'Psychology',
-    other: 'Your Program'
-  };
-  return labels[key] || 'Your Program';
-}
-
-// Reads the intent set by the landing page (Settle In / Find My Way / Meet People)
-function getIntent() {
-  return localStorage.getItem('unite_intent') || 'course_compass';
-}
-
-// Saves the JWT token and user object to localStorage after login
-function saveSession(token, user) {
-  localStorage.setItem('unite_token', token);
-  localStorage.setItem('unite_user', JSON.stringify(user));
-  const profile = { ...user, name: user.name || '' };
-  localStorage.setItem('unite_profile', JSON.stringify(profile));
-}
-
-// Redirects an already-logged-in user to their most relevant feature
-function redirectAfterLogin(user) {
-  const intent = getIntent();
-  const dest = {
-    marketplace: '/features/marketplace.html',
-    community: '/features/community.html',
-    course_compass: '/features/course-compass.html'
-  };
-  window.location.href = dest[intent] || '/features/course-compass.html';
-}
-
-// ─── Wiring ───────────────────────────────────────────────────────────
-
-// Entry point — wires all buttons and screen transitions
-function init() {
-  // If already logged in, skip straight to Course Compass
-  const token = localStorage.getItem('unite_token');
-  if (token) {
-    window.location.href = '/features/course-compass.html';
-    return;
+  /**
+   * Jumps to a specific onboarding screen by its 1-based screen number.
+   */
+  function showScreen(screenNumber) {
+    currentScreen = screenNumber - 1;
+    renderScreen();
   }
 
-  wireEmailValidation();
-
-  document.getElementById('signup-btn')?.addEventListener('click', handleSignup);
-  document.getElementById('signup-email')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleSignup();
-  });
-
-  document.getElementById('login-btn')?.addEventListener('click', handleLogin);
-  document.getElementById('login-password')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleLogin();
-  });
-
-  document.getElementById('show-login-btn')?.addEventListener('click', e => {
-    e.preventDefault();
-    showScreen('screen-login');
-  });
-
-  document.getElementById('show-signup-btn')?.addEventListener('click', e => {
-    e.preventDefault();
-    showScreen('screen-signup');
-  });
-
-  // "Skip for demo" — bypass email verification
-  document.getElementById('skip-verify-btn')?.addEventListener('click', proceedToQuestions);
-
-  document.getElementById('resend-btn')?.addEventListener('click', e => {
-    e.preventDefault();
-    e.target.textContent = 'Sent!';
-  });
-
-  // Question navigation
-  document.getElementById('q-next-btn')?.addEventListener('click', () => {
-    if (!saveCurrentAnswer()) return;
-    currentQuestion++;
-    updateProgress(currentQuestion + 1, QUESTIONS.length + 1);
-    renderQuestion(currentQuestion);
-  });
-
-  document.getElementById('q-back-btn')?.addEventListener('click', () => {
-    if (currentQuestion > 0) {
-      currentQuestion--;
-      updateProgress(currentQuestion + 1, QUESTIONS.length + 1);
-      renderQuestion(currentQuestion);
+  /**
+   * Shows an error message on the email sign-up screen.
+   */
+  function showError(message) {
+    var errEl = document.getElementById('email-error');
+    if (errEl) {
+      errEl.textContent = message;
     }
-  });
+  }
 
-  // Go to dashboard button
-  document.getElementById('go-dashboard-btn')?.addEventListener('click', () => {
-    const intent = getIntent();
-    const dest = {
-      marketplace: '/features/marketplace.html',
-      community: '/features/community.html',
-      course_compass: '/features/course-compass.html'
+  /**
+   * Registers the student with Saaqib's auth API, then moves to verification.
+   */
+  async function registerWithEmail(email, password) {
+    try {
+      var response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          primaryIntent: profile.primary_intent
+        })
+      });
+      var data = await response.json();
+      if (response.ok) {
+        if (data.token) {
+          localStorage.setItem('unite_token', data.token);
+        }
+        if (data.userId) {
+          localStorage.setItem('unite_user_id', String(data.userId));
+        }
+        if (data.user && data.user.id) {
+          localStorage.setItem('unite_user_id', String(data.user.id));
+        }
+        showScreen(2);
+      } else {
+        showError(data.error || 'Registration failed. Try again.');
+      }
+    } catch (err) {
+      console.warn('Auth API unavailable — demo mode');
+      showScreen(2);
+    }
+  }
+
+  /**
+   * Moves the user to the next onboarding screen.
+   */
+  function goNext() {
+    currentScreen += 1;
+    renderScreen();
+  }
+
+  /**
+   * Updates the progress bar for question screens 3 through 10.
+   */
+  function updateProgress(questionIndex) {
+    var step = questionIndex + 1;
+    var percent = (step / TOTAL_QUESTIONS) * 100;
+
+    progressWrap.hidden = false;
+    progressText.textContent = 'Question ' + step + ' of ' + TOTAL_QUESTIONS;
+    progressFill.style.width = percent + '%';
+
+    if (progressTrack) {
+      progressTrack.setAttribute('aria-valuenow', String(step));
+    }
+  }
+
+  /**
+   * Hides the progress bar on non-question screens.
+   */
+  function hideProgress() {
+    progressWrap.hidden = true;
+    progressFill.style.width = '0%';
+  }
+
+  /**
+   * Saves the completed profile to localStorage as unite_profile.
+   */
+  function saveProfile() {
+    var saved = {
+      name: profile.name,
+      email: profile.email,
+      program: profile.program,
+      year: profile.year,
+      has_car: profile.has_car === true,
+      housing: profile.housing,
+      challenge: profile.challenge,
+      personality: profile.personality,
+      interests: profile.interests.slice(),
+      primary_intent: profile.primary_intent,
+      needed_courses: profile.needed_courses.slice()
     };
-    window.location.href = dest[intent] || '/features/course-compass.html';
-  });
-}
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(saved));
+  }
 
-document.addEventListener('DOMContentLoaded', init);
+  /**
+   * Sends the user to the feature page that matches their primary intent.
+   */
+  function redirectToFeature() {
+    var routes = {
+      marketplace: '/features/marketplace.html',
+      course_compass: '/features/course-compass.html',
+      community: '/features/community.html'
+    };
+
+    var destination = routes[profile.primary_intent] || '/';
+    window.location.href = destination;
+  }
+
+  /**
+   * Builds three personalized recommendation cards for the welcome screen.
+   */
+  function buildWelcomeCards() {
+    var cards = [];
+
+    if (profile.primary_intent === 'marketplace') {
+      cards.push({
+        icon: '🎒',
+        title: 'Campus Marketplace',
+        desc: profile.has_car
+          ? 'Browse listings from UCalgary students near you.'
+          : 'We set campus pickup as your default — meet at TFDL, MacHall, or Science Theatres.'
+      });
+    } else if (profile.primary_intent === 'course_compass') {
+      cards.push({
+        icon: '🧭',
+        title: 'Course Compass',
+        desc: 'Map your ' + profile.program + ' degree and see exactly what to take in ' + profile.year + '.'
+      });
+    } else {
+      cards.push({
+        icon: '🤝',
+        title: 'Community Hub',
+        desc: 'Find events and people who match your vibe as a' +
+          (profile.personality === 'Introvert' ? 'n introvert' : profile.personality === 'Extrovert' ? 'n extrovert' : ' student who goes with the flow') + '.'
+      });
+    }
+
+    if (profile.challenge === 'Making friends') {
+      cards.push({
+        icon: '👋',
+        title: 'Meet Your People',
+        desc: 'Join clubs and events for ' + profile.program + ' students who share your interests.'
+      });
+    } else if (profile.challenge === 'Planning my degree') {
+      cards.push({
+        icon: '📋',
+        title: 'Degree Roadmap',
+        desc: 'Course Compass will track prerequisites and suggest your next semester.'
+      });
+    } else if (profile.challenge === 'Finding stuff I need') {
+      cards.push({
+        icon: '🛍️',
+        title: 'Campus Deals',
+        desc: 'Textbooks, furniture, and gear from students on campus — no car needed.'
+      });
+    } else {
+      cards.push({
+        icon: '📅',
+        title: 'Things To Do',
+        desc: 'Sports, clubs, and hangouts picked for your interests: ' + profile.interests.slice(0, 3).join(', ') + '.'
+      });
+    }
+
+    if (profile.interests.length > 0) {
+      cards.push({
+        icon: '⭐',
+        title: 'Based On Your Interests',
+        desc: 'We will surface ' + profile.interests.join(', ') + ' content across UNite.'
+      });
+    } else {
+      cards.push({
+        icon: '⭐',
+        title: 'Explore UNite',
+        desc: 'Discover marketplace listings, degree tools, and community events tailored to you.'
+      });
+    }
+
+    return cards.slice(0, 3);
+  }
+
+  /**
+   * Renders the email sign-up screen with live UCalgary validation.
+   */
+  function renderEmailScreen() {
+    hideProgress();
+    root.innerHTML =
+      '<section class="onboarding__screen">' +
+        '<h1 class="onboarding__title">Join UNite</h1>' +
+        '<p class="onboarding__subtitle">Sign up with your UCalgary email to get started.</p>' +
+        '<div class="onboarding__body">' +
+          '<label class="input-label" for="email-input">UCalgary email</label>' +
+          '<div class="onboarding__email-wrap">' +
+            '<input type="email" id="email-input" class="input-field" placeholder="you@ucalgary.ca" autocomplete="email">' +
+            '<span id="email-check" class="onboarding__email-check" aria-hidden="true">✅</span>' +
+          '</div>' +
+          '<label class="input-label" for="password-input" style="margin-top:var(--space-md);">Password</label>' +
+          '<input type="password" id="password-input" class="input-field" placeholder="At least 8 characters" autocomplete="new-password" minlength="8">' +
+          '<p id="email-error" class="onboarding__error" role="alert"></p>' +
+        '</div>' +
+        '<footer class="onboarding__footer">' +
+          '<button type="button" id="email-continue" class="btn-primary btn-block" disabled>Continue</button>' +
+        '</footer>' +
+      '</section>';
+
+    var emailInput = document.getElementById('email-input');
+    var emailCheck = document.getElementById('email-check');
+    var emailError = document.getElementById('email-error');
+    var passwordInput = document.getElementById('password-input');
+    var continueBtn = document.getElementById('email-continue');
+
+    /**
+     * Validates the email and password fields and toggles the continue button.
+     */
+    function validateEmail() {
+      var value = emailInput.value.trim();
+      var valid = isUcalgaryEmail(value);
+      var hasInput = value.length > 0;
+      var passwordOk = passwordInput.value.length >= 8;
+
+      emailInput.classList.remove('input-field--valid', 'input-field--invalid');
+      emailCheck.classList.remove('onboarding__email-check--visible');
+      emailError.textContent = '';
+
+      if (!hasInput) {
+        continueBtn.disabled = true;
+        return;
+      }
+
+      if (valid && passwordOk) {
+        emailInput.classList.add('input-field--valid');
+        emailCheck.classList.add('onboarding__email-check--visible');
+        continueBtn.disabled = false;
+      } else if (!valid) {
+        emailInput.classList.add('input-field--invalid');
+        emailError.textContent = 'UNite is for UCalgary students. Use your @ucalgary.ca email.';
+        continueBtn.disabled = true;
+      } else {
+        continueBtn.disabled = true;
+      }
+    }
+
+    emailInput.addEventListener('input', validateEmail);
+    passwordInput.addEventListener('input', validateEmail);
+
+    continueBtn.addEventListener('click', function () {
+      if (!isUcalgaryEmail(emailInput.value)) return;
+      if (passwordInput.value.length < 8) return;
+      profile.email = emailInput.value.trim().toLowerCase();
+      continueBtn.disabled = true;
+      continueBtn.textContent = 'Creating account…';
+      registerWithEmail(profile.email, passwordInput.value).finally(function () {
+        continueBtn.disabled = false;
+        continueBtn.textContent = 'Continue';
+      });
+    });
+  }
+
+  /**
+   * Renders the email verification confirmation screen.
+   */
+  function renderVerificationScreen() {
+    hideProgress();
+    root.innerHTML =
+      '<section class="onboarding__screen">' +
+        '<div class="onboarding__verify-icon" aria-hidden="true">📬</div>' +
+        '<h1 class="onboarding__title">Check your inbox</h1>' +
+        '<p class="onboarding__subtitle">We sent a verification link to your UCalgary email. Check your inbox.</p>' +
+        '<div class="onboarding__body">' +
+          '<p class="text-muted" style="font-size:0.9375rem;margin-bottom:var(--space-md);">' +
+            'Sent to <strong>' + profile.email + '</strong>' +
+          '</p>' +
+          '<button type="button" id="resend-btn" class="btn-secondary btn-block">Resend verification email</button>' +
+        '</div>' +
+        '<footer class="onboarding__footer">' +
+          '<button type="button" id="verify-continue" class="btn-primary btn-block">Continue</button>' +
+        '</footer>' +
+      '</section>';
+
+    document.getElementById('resend-btn').addEventListener('click', function () {
+      var btn = document.getElementById('resend-btn');
+      btn.textContent = 'Verification email sent!';
+      btn.disabled = true;
+    });
+
+    document.getElementById('verify-continue').addEventListener('click', goNext);
+  }
+
+  /**
+   * Renders a single-choice question with clickable option buttons.
+   */
+  function renderChoiceQuestion(config) {
+    updateProgress(config.questionIndex);
+
+    var rowClass = config.row ? ' onboarding__choices--row' : '';
+    var choicesHtml;
+    choicesHtml = config.options.map(function (option) {
+      var selected = config.currentValue === option ? ' onboarding__choice--selected' : '';
+      return '<button type="button" class="onboarding__choice' + selected + '" data-value="' + option + '">' + option + '</button>';
+    }).join('');
+
+    root.innerHTML =
+      '<section class="onboarding__screen">' +
+        '<h1 class="onboarding__title">' + config.title + '</h1>' +
+        (config.subtitle ? '<p class="onboarding__subtitle">' + config.subtitle + '</p>' : '') +
+        '<div class="onboarding__body">' +
+          '<div class="onboarding__choices' + rowClass + '" id="choice-list">' + choicesHtml + '</div>' +
+        '</div>' +
+        '<footer class="onboarding__footer">' +
+          '<button type="button" id="choice-continue" class="btn-primary btn-block"' +
+            (config.currentValue ? '' : ' disabled') + '>Continue</button>' +
+        '</footer>' +
+      '</section>';
+
+    var selectedValue = config.currentValue;
+    var continueBtn = document.getElementById('choice-continue');
+
+    document.getElementById('choice-list').addEventListener('click', function (event) {
+      var btn = event.target.closest('.onboarding__choice');
+      if (!btn) return;
+
+      selectedValue = btn.dataset.value;
+      document.querySelectorAll('.onboarding__choice').forEach(function (el) {
+        el.classList.remove('onboarding__choice--selected');
+      });
+      btn.classList.add('onboarding__choice--selected');
+      continueBtn.disabled = false;
+    });
+
+    continueBtn.addEventListener('click', function () {
+      if (!selectedValue) return;
+      config.onSelect(selectedValue);
+      goNext();
+    });
+  }
+
+  /**
+   * Renders a text input question for the user's first name.
+   */
+  function renderNameScreen() {
+    updateProgress(0);
+
+    root.innerHTML =
+      '<section class="onboarding__screen">' +
+        '<h1 class="onboarding__title">What is your name?</h1>' +
+        '<p class="onboarding__subtitle">First name only — we will use this to greet you.</p>' +
+        '<div class="onboarding__body">' +
+          '<label class="input-label" for="name-input">First name</label>' +
+          '<input type="text" id="name-input" class="input-field" placeholder="Your first name" autocomplete="given-name" value="' + profile.name + '">' +
+        '</div>' +
+        '<footer class="onboarding__footer">' +
+          '<button type="button" id="name-continue" class="btn-primary btn-block"' +
+            (profile.name ? '' : ' disabled') + '>Continue</button>' +
+        '</footer>' +
+      '</section>';
+
+    var nameInput = document.getElementById('name-input');
+    var continueBtn = document.getElementById('name-continue');
+
+    nameInput.addEventListener('input', function () {
+      continueBtn.disabled = nameInput.value.trim().length === 0;
+    });
+
+    continueBtn.addEventListener('click', function () {
+      var name = nameInput.value.trim();
+      if (!name) return;
+      profile.name = name;
+      goNext();
+    });
+
+    nameInput.focus();
+  }
+
+  /**
+   * Renders a dropdown question for the user's program.
+   */
+  function renderProgramScreen() {
+    updateProgress(1);
+
+    var optionsHtml = programs.map(function (program) {
+      var selected = profile.program === program ? ' selected' : '';
+      return '<option value="' + program + '"' + selected + '>' + program + '</option>';
+    }).join('');
+
+    root.innerHTML =
+      '<section class="onboarding__screen">' +
+        '<h1 class="onboarding__title">What program are you in?</h1>' +
+        '<p class="onboarding__subtitle">This helps us personalize your UNite experience.</p>' +
+        '<div class="onboarding__body">' +
+          '<label class="input-label" for="program-select">Program</label>' +
+          '<select id="program-select" class="input-field">' +
+            '<option value="" disabled' + (profile.program ? '' : ' selected') + '>Select your program</option>' +
+            optionsHtml +
+          '</select>' +
+        '</div>' +
+        '<footer class="onboarding__footer">' +
+          '<button type="button" id="program-continue" class="btn-primary btn-block"' +
+            (profile.program ? '' : ' disabled') + '>Continue</button>' +
+        '</footer>' +
+      '</section>';
+
+    var programSelect = document.getElementById('program-select');
+    var continueBtn = document.getElementById('program-continue');
+
+    programSelect.addEventListener('change', function () {
+      continueBtn.disabled = !programSelect.value;
+    });
+
+    continueBtn.addEventListener('click', function () {
+      if (!programSelect.value) return;
+      profile.program = programSelect.value;
+      goNext();
+    });
+  }
+
+  /**
+   * Renders the car ownership question with Yes and No buttons.
+   */
+  function renderCarScreen() {
+    renderChoiceQuestion({
+      questionIndex: 3,
+      title: 'Do you have a car?',
+      subtitle: 'This helps us set smart defaults in the Marketplace.',
+      options: ['Yes', 'No'],
+      row: true,
+      currentValue: profile.has_car === true ? 'Yes' : profile.has_car === false ? 'No' : null,
+      onSelect: function (value) {
+        profile.has_car = value === 'Yes';
+      }
+    });
+  }
+
+  /**
+   * Renders the multi-select interests question with toggle chips.
+   */
+  function renderInterestsScreen() {
+    updateProgress(7);
+
+    var chipsHtml = interestOptions.map(function (interest) {
+      var selected = profile.interests.indexOf(interest) !== -1 ? ' onboarding__chip--selected' : '';
+      return '<button type="button" class="onboarding__chip' + selected + '" data-interest="' + interest + '">' + interest + '</button>';
+    }).join('');
+
+    root.innerHTML =
+      '<section class="onboarding__screen">' +
+        '<h1 class="onboarding__title">What are your interests?</h1>' +
+        '<p class="onboarding__subtitle">Pick as many as you like — tap to select.</p>' +
+        '<div class="onboarding__body">' +
+          '<div class="onboarding__chips" id="interest-chips">' + chipsHtml + '</div>' +
+        '</div>' +
+        '<footer class="onboarding__footer">' +
+          '<button type="button" id="interests-continue" class="btn-primary btn-block"' +
+            (profile.interests.length ? '' : ' disabled') + '>Continue</button>' +
+        '</footer>' +
+      '</section>';
+
+    var selectedInterests = profile.interests.slice();
+    var continueBtn = document.getElementById('interests-continue');
+
+    document.getElementById('interest-chips').addEventListener('click', function (event) {
+      var chip = event.target.closest('.onboarding__chip');
+      if (!chip) return;
+
+      var interest = chip.dataset.interest;
+      var index = selectedInterests.indexOf(interest);
+
+      if (index === -1) {
+        selectedInterests.push(interest);
+        chip.classList.add('onboarding__chip--selected');
+      } else {
+        selectedInterests.splice(index, 1);
+        chip.classList.remove('onboarding__chip--selected');
+      }
+
+      continueBtn.disabled = selectedInterests.length === 0;
+    });
+
+    continueBtn.addEventListener('click', function () {
+      if (!selectedInterests.length) return;
+      profile.interests = selectedInterests.slice();
+      goNext();
+    });
+  }
+
+  /**
+   * Renders the welcome screen with personalized cards and a finish button.
+   */
+  function renderWelcomeScreen() {
+    hideProgress();
+    saveProfile();
+
+    var cards = buildWelcomeCards();
+    var cardsHtml = cards.map(function (card) {
+      return '<article class="onboarding__welcome-card">' +
+        '<div class="onboarding__welcome-card-icon" aria-hidden="true">' + card.icon + '</div>' +
+        '<h2 class="onboarding__welcome-card-title">' + card.title + '</h2>' +
+        '<p class="onboarding__welcome-card-desc">' + card.desc + '</p>' +
+      '</article>';
+    }).join('');
+
+    root.innerHTML =
+      '<section class="onboarding__screen">' +
+        '<h1 class="onboarding__title">Welcome to UNite, ' + profile.name + '!</h1>' +
+        '<p class="onboarding__subtitle">Here is what we found for you.</p>' +
+        '<div class="onboarding__welcome-cards">' + cardsHtml + '</div>' +
+        '<footer class="onboarding__footer">' +
+          '<button type="button" id="lets-go" class="btn-primary btn-block">Let\'s Go</button>' +
+        '</footer>' +
+      '</section>';
+
+    document.getElementById('lets-go').addEventListener('click', redirectToFeature);
+  }
+
+  /**
+   * Picks and renders the correct screen based on the current step index.
+   */
+  function renderScreen() {
+    switch (currentScreen) {
+      case 0:
+        renderEmailScreen();
+        break;
+      case 1:
+        renderVerificationScreen();
+        break;
+      case 2:
+        renderNameScreen();
+        break;
+      case 3:
+        renderProgramScreen();
+        break;
+      case 4:
+        renderChoiceQuestion({
+          questionIndex: 2,
+          title: 'What year are you?',
+          options: years,
+          currentValue: profile.year || null,
+          onSelect: function (value) {
+            profile.year = value;
+          }
+        });
+        break;
+      case 5:
+        renderCarScreen();
+        break;
+      case 6:
+        renderChoiceQuestion({
+          questionIndex: 4,
+          title: 'Where do you live?',
+          options: housingOptions,
+          currentValue: profile.housing || null,
+          onSelect: function (value) {
+            profile.housing = value;
+          }
+        });
+        break;
+      case 7:
+        renderChoiceQuestion({
+          questionIndex: 5,
+          title: 'What is your biggest challenge right now?',
+          options: challenges,
+          currentValue: profile.challenge || null,
+          onSelect: function (value) {
+            profile.challenge = value;
+          }
+        });
+        break;
+      case 8:
+        renderChoiceQuestion({
+          questionIndex: 6,
+          title: 'Are you more of an introvert or extrovert?',
+          options: personalities,
+          currentValue: profile.personality || null,
+          onSelect: function (value) {
+            profile.personality = value;
+          }
+        });
+        break;
+      case 9:
+        renderInterestsScreen();
+        break;
+      case 10:
+        renderWelcomeScreen();
+        break;
+      default:
+        renderEmailScreen();
+    }
+  }
+
+  /**
+   * Starts the onboarding flow when the page loads.
+   */
+  function init() {
+    var params = new URLSearchParams(window.location.search);
+    var demoScreen = params.get('screen');
+
+    if (demoScreen === 'program') {
+      localStorage.setItem(INTENT_KEY, 'marketplace');
+      profile.primary_intent = 'marketplace';
+      profile.email = 'mousa@ucalgary.ca';
+      profile.name = 'Mousa';
+      currentScreen = 3;
+      renderScreen();
+      return;
+    }
+
+    if (!profile.primary_intent) {
+      window.location.href = '/';
+      return;
+    }
+    renderScreen();
+  }
+
+  init();
+})();
