@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config(); // v2 — profile dropdown, email verification, onboarding guard
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
