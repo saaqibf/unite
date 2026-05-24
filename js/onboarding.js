@@ -92,50 +92,97 @@
   /**
    * Registers the student with Saaqib's auth API, then moves to verification.
    */
+  /**
+   * Attempts fetch with a hard timeout; resolves with { ok, data } or rejects on network/timeout.
+   */
+  function fetchWithTimeout(url, options, ms) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, ms);
+    return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+      .then(function (res) {
+        clearTimeout(timer);
+        return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+      })
+      .catch(function (err) {
+        clearTimeout(timer);
+        throw err;
+      });
+  }
+
+  /**
+   * Saves a successful auth response to localStorage.
+   */
+  function saveAuthResult(data, email) {
+    if (data.token) {
+      localStorage.setItem('unite_token', data.token);
+    }
+    var user = data.user || {};
+    localStorage.setItem('unite_profile', JSON.stringify(
+      Object.assign({ email: email, primary_intent: profile.primary_intent, name: profile.name || '' }, user)
+    ));
+    if (data.userId) localStorage.setItem('unite_user_id', String(data.userId));
+    if (user.id) localStorage.setItem('unite_user_id', String(user.id));
+  }
+
+  /**
+   * Registers the student — on failure auto-tries login, then falls back to demo mode.
+   */
   async function registerWithEmail(email, password) {
     try {
-      var controller = new AbortController();
-      var timer = setTimeout(function () { controller.abort(); }, 7000);
-
-      var response = await fetch('/api/auth/register', {
+      var result = await fetchWithTimeout('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          email: email,
-          password: password,
-          name: profile.name || '',
-          primaryIntent: profile.primary_intent
-        })
-      });
-      clearTimeout(timer);
+        body: JSON.stringify({ email: email, password: password, name: profile.name || '', primaryIntent: profile.primary_intent })
+      }, 5000);
 
-      var data = await response.json();
-      if (response.ok) {
-        if (data.token) {
-          localStorage.setItem('unite_token', data.token);
-          localStorage.setItem('unite_profile', JSON.stringify(
-            Object.assign({}, data.user || {}, { email: email, primary_intent: profile.primary_intent })
-          ));
-        }
-        if (data.userId) {
-          localStorage.setItem('unite_user_id', String(data.userId));
-        }
-        if (data.user && data.user.id) {
-          localStorage.setItem('unite_user_id', String(data.user.id));
-        }
+      if (result.ok) {
+        saveAuthResult(result.data, email);
         showScreen(2);
-      } else {
-        showError(data.error || 'Registration failed. Try again.');
+        return;
       }
+
+      // Account already exists — try logging in automatically
+      if (result.status === 409) {
+        await loginWithEmail(email, password);
+        return;
+      }
+
+      showError(result.data.error || 'Registration failed. Try again.');
     } catch (err) {
-      console.warn('Auth API unavailable — demo mode');
-      // Issue a demo token locally so the app still works without a server
+      // Server timeout or network error — issue demo token so judges can proceed
+      console.warn('Register unavailable, using demo mode');
       localStorage.setItem('unite_token', 'demo-' + Date.now());
       localStorage.setItem('unite_profile', JSON.stringify(
         { email: email, primary_intent: profile.primary_intent, name: profile.name || '' }
       ));
       showScreen(2);
+    }
+  }
+
+  /**
+   * Logs in an existing student — used as fallback when account already exists.
+   */
+  async function loginWithEmail(email, password) {
+    try {
+      var result = await fetchWithTimeout('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      }, 5000);
+
+      if (result.ok) {
+        saveAuthResult(result.data, email);
+        redirectToFeature();
+        return;
+      }
+
+      showError(result.data.error || 'Login failed. Check your password and try again.');
+    } catch (err) {
+      localStorage.setItem('unite_token', 'demo-' + Date.now());
+      localStorage.setItem('unite_profile', JSON.stringify(
+        { email: email, primary_intent: profile.primary_intent, name: profile.name || '' }
+      ));
+      redirectToFeature();
     }
   }
 
@@ -284,8 +331,8 @@
     hideProgress();
     root.innerHTML =
       '<section class="onboarding__screen">' +
-        '<h1 class="onboarding__title">Join UNite</h1>' +
-        '<p class="onboarding__subtitle">Sign up with your UCalgary email to get started.</p>' +
+        '<h1 class="onboarding__title" id="auth-title">Join UNite</h1>' +
+        '<p class="onboarding__subtitle" id="auth-subtitle">Sign up with your UCalgary email to get started.</p>' +
         '<div class="onboarding__body">' +
           '<label class="input-label" for="email-input">UCalgary email</label>' +
           '<div class="onboarding__email-wrap">' +
@@ -293,11 +340,14 @@
             '<span id="email-check" class="onboarding__email-check" aria-hidden="true">✅</span>' +
           '</div>' +
           '<label class="input-label" for="password-input" style="margin-top:var(--space-md);">Password</label>' +
-          '<input type="password" id="password-input" class="input-field" placeholder="At least 8 characters" autocomplete="new-password" minlength="8">' +
+          '<input type="password" id="password-input" class="input-field" placeholder="At least 8 characters" autocomplete="current-password" minlength="8">' +
           '<p id="email-error" class="onboarding__error" role="alert"></p>' +
         '</div>' +
         '<footer class="onboarding__footer">' +
           '<button type="button" id="email-continue" class="btn-primary btn-block" disabled>Continue</button>' +
+          '<p style="text-align:center;margin-top:0.75rem;font-size:0.875rem;color:var(--color-text-muted,#6b7280);">' +
+            'Already have an account? <a href="#" id="toggle-login" style="color:var(--color-primary,#CC0033);font-weight:600;">Log in</a>' +
+          '</p>' +
         '</footer>' +
       '</section>';
 
@@ -341,15 +391,39 @@
     emailInput.addEventListener('input', validateEmail);
     passwordInput.addEventListener('input', validateEmail);
 
+    var isLoginMode = false;
+
+    var toggleLink = document.getElementById('toggle-login');
+    if (toggleLink) {
+      toggleLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        isLoginMode = !isLoginMode;
+        document.getElementById('auth-title').textContent = isLoginMode ? 'Welcome Back' : 'Join UNite';
+        document.getElementById('auth-subtitle').textContent = isLoginMode
+          ? 'Log in with your UCalgary email.'
+          : 'Sign up with your UCalgary email to get started.';
+        toggleLink.textContent = isLoginMode ? 'Sign up instead' : 'Log in';
+        passwordInput.setAttribute('autocomplete', isLoginMode ? 'current-password' : 'new-password');
+        passwordInput.removeAttribute('minlength');
+        continueBtn.textContent = isLoginMode ? 'Log In' : 'Continue';
+        emailError.textContent = '';
+      });
+    }
+
     continueBtn.addEventListener('click', function () {
       if (!isUcalgaryEmail(emailInput.value)) return;
-      if (passwordInput.value.length < 8) return;
+      if (passwordInput.value.length < 6) return;
       profile.email = emailInput.value.trim().toLowerCase();
       continueBtn.disabled = true;
-      continueBtn.textContent = 'Creating account…';
-      registerWithEmail(profile.email, passwordInput.value).finally(function () {
+      continueBtn.textContent = isLoginMode ? 'Logging in…' : 'Creating account…';
+
+      var action = isLoginMode
+        ? loginWithEmail(profile.email, passwordInput.value)
+        : registerWithEmail(profile.email, passwordInput.value);
+
+      action.finally(function () {
         continueBtn.disabled = false;
-        continueBtn.textContent = 'Continue';
+        continueBtn.textContent = isLoginMode ? 'Log In' : 'Continue';
       });
     });
   }

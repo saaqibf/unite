@@ -79,6 +79,9 @@ router.post('/register', async (req, res) => {
     let user = { id: null, email: email.toLowerCase(), name: name || null };
 
     try {
+      // Hard 4-second timeout on all DB operations — fail fast instead of hanging
+      await query('SET statement_timeout = 4000', []);
+
       const existing = await query('SELECT id, email, name FROM users WHERE email = $1', [email.toLowerCase()]);
       if (existing.rows.length > 0) {
         return res.status(409).json({ error: 'An account with this email already exists. Please log in.' });
