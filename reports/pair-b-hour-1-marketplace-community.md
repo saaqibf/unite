@@ -2,7 +2,7 @@
 **Date:** May 23, 2026 — Hour 1–2  
 **Pair:** Pair B (Primel)  
 **Branch:** pair-b  
-**Commit:** 8570e7a (initial push); follow-up commit pending for sports form + screenshots
+**Commit:** 8570e7a, 00cf6df
 
 ## What Was Built
 Marketplace + Community Hub — browse/list/filter/DM flow, RSVP, Pull Up, event feeds, and Express marketplace API.
