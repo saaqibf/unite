@@ -93,6 +93,29 @@ async function initDB() {
     );
   `);
   console.log('Database tables ready');
+
+  // Seed demo listings if the marketplace is empty
+  try {
+    const { rows } = await p.query('SELECT COUNT(*) as cnt FROM marketplace_listings');
+    if (parseInt(rows[0].cnt) === 0) {
+      const seeds = [
+        ['ucalgary-demo', 'UNite Demo', 'CPSC 331 — Algorithm Design Textbook', '9th edition, like new', 45, 'Like New', 'Textbooks', 'TFDL', null, '["https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400"]', '["CPSC 331"]'],
+        ['ucalgary-demo', 'UNite Demo', 'MATH 271 — Discrete Mathematics Notes', 'Full semester notes, A+ student', 15, 'Good', 'Textbooks', 'MacHall', null, '[]', '["MATH 271"]'],
+        ['ucalgary-demo', 'UNite Demo', 'TI-84 Plus Graphing Calculator', 'Works perfectly, includes manual', 65, 'Good', 'Electronics', 'ICT Building', null, '["https://images.unsplash.com/photo-1564769662533-4f00a87b4056?w=400"]', '[]'],
+        ['ucalgary-demo', 'UNite Demo', 'CPSC 217 Python Programming Textbook', 'Minimal highlighting, great condition', 30, 'Like New', 'Textbooks', 'Engineering Building', null, '[]', '["CPSC 217"]'],
+        ['ucalgary-demo', 'UNite Demo', 'IKEA Desk Lamp — perfect for dorm', 'Barely used, adjustable arm', 18, 'Like New', 'Furniture', 'Residence', null, '[]', '[]'],
+      ];
+      for (const [sid, sname, title, desc, price, cond, cat, spot, other, photos, tags] of seeds) {
+        await p.query(
+          `INSERT INTO marketplace_listings (seller_id, seller_name, title, description, price, condition, category, meetup_spot, meetup_other, photos, course_tags, status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,'active')`,
+          [sid, sname, title, desc, price, cond, cat, spot, other, photos, tags]
+        );
+      }
+      console.log('Seeded 5 demo marketplace listings');
+    }
+  } catch (seedErr) {
+    console.warn('Could not seed listings:', seedErr.message);
+  }
 }
 
 // ─── Marketplace helpers (Pair B) ───────────────────────────────────────

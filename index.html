@@ -880,16 +880,36 @@
 <nav id="nav">
   <a href="/" class="logo">U<span class="n">N</span>ite</a>
   <div class="nav-right">
-    <a href="/features/onboarding.html?mode=login" class="signin">Sign In</a>
     <a href="/features/marketplace.html" class="signin">Marketplace</a>
     <a href="/features/course-compass.html" class="signin">Course Compass</a>
     <a href="/features/community.html" class="signin">Community</a>
-    <a href="/features/onboarding.html" class="nav-cta">Join UNite →</a>
+    <span id="nav-user-area">
+      <a href="/features/onboarding.html?mode=login" class="signin" id="nav-signin-btn">Sign In</a>
+      <a href="/features/onboarding.html" class="nav-cta" id="nav-join-btn">Join UNite →</a>
+    </span>
   </div>
   <button class="hamburger" id="ham" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
 </nav>
+<script>
+(function(){
+  try {
+    var token = localStorage.getItem('unite_token');
+    var profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+    var name = profile.name;
+    if (!name && token) {
+      try { var payload = JSON.parse(atob(token.split('.')[1])); name = payload.name; } catch(e) {}
+    }
+    if (token && name) {
+      var area = document.getElementById('nav-user-area');
+      if (area) area.innerHTML = '<span class="signin" style="opacity:.8">Hi, ' + name.split(' ')[0] + ' 👋</span>' +
+        '<a href="/features/course-compass.html" class="nav-cta">Dashboard →</a>' +
+        '<a href="#" class="signin" onclick="localStorage.removeItem(\'unite_token\');localStorage.removeItem(\'unite_profile\');window.location.reload();">Sign Out</a>';
+    }
+  } catch(e) {}
+})();
+</script>
 
 <!-- Mobile menu -->
 <div class="mobile-menu" id="mob-menu">
