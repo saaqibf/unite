@@ -325,29 +325,37 @@
   }
 
   /**
-   * Renders the email sign-up screen with live UCalgary validation.
+   * Renders the auth screen — detects ?mode=login from URL to start in login tab.
    */
   function renderEmailScreen() {
     hideProgress();
+    var startLogin = new URLSearchParams(window.location.search).get('mode') === 'login';
+
     root.innerHTML =
       '<section class="onboarding__screen">' +
-        '<h1 class="onboarding__title" id="auth-title">Join UNite</h1>' +
-        '<p class="onboarding__subtitle" id="auth-subtitle">Sign up with your UCalgary email to get started.</p>' +
+        '<div class="onboarding__auth-tabs" role="tablist">' +
+          '<button role="tab" type="button" id="tab-signup" class="onboarding__tab' + (startLogin ? '' : ' onboarding__tab--active') + '" aria-selected="' + (startLogin ? 'false' : 'true') + '">Sign Up</button>' +
+          '<button role="tab" type="button" id="tab-login"  class="onboarding__tab' + (startLogin ? ' onboarding__tab--active' : '') + '" aria-selected="' + (startLogin ? 'true' : 'false') + '">Log In</button>' +
+        '</div>' +
         '<div class="onboarding__body">' +
+          '<p id="auth-subtitle" style="font-size:0.9375rem;color:var(--color-text-muted,#6b7280);margin-bottom:var(--space-md);">' +
+            (startLogin ? 'Welcome back — use your UCalgary email.' : 'Create your account with your UCalgary email.') +
+          '</p>' +
           '<label class="input-label" for="email-input">UCalgary email</label>' +
           '<div class="onboarding__email-wrap">' +
             '<input type="email" id="email-input" class="input-field" placeholder="you@ucalgary.ca" autocomplete="email">' +
             '<span id="email-check" class="onboarding__email-check" aria-hidden="true">✅</span>' +
           '</div>' +
           '<label class="input-label" for="password-input" style="margin-top:var(--space-md);">Password</label>' +
-          '<input type="password" id="password-input" class="input-field" placeholder="At least 8 characters" autocomplete="current-password" minlength="8">' +
+          '<input type="password" id="password-input" class="input-field"' +
+            ' placeholder="' + (startLogin ? 'Your password' : 'At least 8 characters') + '"' +
+            ' autocomplete="' + (startLogin ? 'current-password' : 'new-password') + '">' +
           '<p id="email-error" class="onboarding__error" role="alert"></p>' +
         '</div>' +
         '<footer class="onboarding__footer">' +
-          '<button type="button" id="email-continue" class="btn-primary btn-block" disabled>Continue</button>' +
-          '<p style="text-align:center;margin-top:0.75rem;font-size:0.875rem;color:var(--color-text-muted,#6b7280);">' +
-            'Already have an account? <a href="#" id="toggle-login" style="color:var(--color-primary,#CC0033);font-weight:600;">Log in</a>' +
-          '</p>' +
+          '<button type="button" id="email-continue" class="btn-primary btn-block" disabled>' +
+            (startLogin ? 'Log In' : 'Create Account') +
+          '</button>' +
         '</footer>' +
       '</section>';
 
@@ -391,24 +399,31 @@
     emailInput.addEventListener('input', validateEmail);
     passwordInput.addEventListener('input', validateEmail);
 
-    var isLoginMode = false;
+    var isLoginMode = new URLSearchParams(window.location.search).get('mode') === 'login';
 
-    var toggleLink = document.getElementById('toggle-login');
-    if (toggleLink) {
-      toggleLink.addEventListener('click', function (e) {
-        e.preventDefault();
-        isLoginMode = !isLoginMode;
-        document.getElementById('auth-title').textContent = isLoginMode ? 'Welcome Back' : 'Join UNite';
-        document.getElementById('auth-subtitle').textContent = isLoginMode
-          ? 'Log in with your UCalgary email.'
-          : 'Sign up with your UCalgary email to get started.';
-        toggleLink.textContent = isLoginMode ? 'Sign up instead' : 'Log in';
-        passwordInput.setAttribute('autocomplete', isLoginMode ? 'current-password' : 'new-password');
-        passwordInput.removeAttribute('minlength');
-        continueBtn.textContent = isLoginMode ? 'Log In' : 'Continue';
-        emailError.textContent = '';
-      });
+    function switchTab(toLogin) {
+      isLoginMode = toLogin;
+      var signupTab = document.getElementById('tab-signup');
+      var loginTab  = document.getElementById('tab-login');
+      var subtitle  = document.getElementById('auth-subtitle');
+
+      signupTab.classList.toggle('onboarding__tab--active', !toLogin);
+      signupTab.setAttribute('aria-selected', String(!toLogin));
+      loginTab.classList.toggle('onboarding__tab--active', toLogin);
+      loginTab.setAttribute('aria-selected', String(toLogin));
+
+      subtitle.textContent = toLogin
+        ? 'Welcome back — use your UCalgary email.'
+        : 'Create your account with your UCalgary email.';
+      passwordInput.placeholder = toLogin ? 'Your password' : 'At least 8 characters';
+      passwordInput.setAttribute('autocomplete', toLogin ? 'current-password' : 'new-password');
+      continueBtn.textContent = toLogin ? 'Log In' : 'Create Account';
+      emailError.textContent = '';
+      validateEmail();
     }
+
+    document.getElementById('tab-signup').addEventListener('click', function () { switchTab(false); });
+    document.getElementById('tab-login').addEventListener('click',  function () { switchTab(true); });
 
     continueBtn.addEventListener('click', function () {
       if (!isUcalgaryEmail(emailInput.value)) return;
@@ -423,7 +438,7 @@
 
       action.finally(function () {
         continueBtn.disabled = false;
-        continueBtn.textContent = isLoginMode ? 'Log In' : 'Continue';
+        continueBtn.textContent = isLoginMode ? 'Log In' : 'Create Account';
       });
     });
   }
