@@ -1,5 +1,5 @@
 /**
- * Database pool and in-memory fallback for marketplace listings.
+ * PostgreSQL pool, user tables (auth), and marketplace listing helpers.
  */
 
 const { Pool } = require('pg');
@@ -16,13 +16,69 @@ function useDatabase() {
 }
 
 /**
- * Initializes PostgreSQL tables when a database is available.
+ * Returns the shared connection pool, creating it on first use.
+ */
+function getPool() {
+  if (!useDatabase()) return null;
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    });
+  }
+  return pool;
+}
+
+/**
+ * Runs a SQL query for auth routes.
+ */
+async function query(text, params) {
+  const result = await getPool().query(text, params);
+  return result;
+}
+
+/**
+ * Creates user and refresh token tables for auth.
+ */
+async function initDB() {
+  if (!useDatabase()) return;
+  await getPool().query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id          SERIAL PRIMARY KEY,
+      email       VARCHAR(255) UNIQUE NOT NULL,
+      password    VARCHAR(255) NOT NULL,
+      name        VARCHAR(100),
+      program     VARCHAR(100),
+      year        VARCHAR(20),
+      has_car     BOOLEAN DEFAULT false,
+      living      VARCHAR(50),
+      challenge   VARCHAR(100),
+      personality VARCHAR(50),
+      interests   TEXT[],
+      primary_intent VARCHAR(50),
+      needed_courses TEXT[],
+      verified    BOOLEAN DEFAULT false,
+      verify_token VARCHAR(255),
+      created_at  TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      token      VARCHAR(512) NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  console.log('Auth database tables ready');
+}
+
+/**
+ * Creates marketplace tables when a database is available.
  */
 async function initDb() {
   if (!useDatabase()) return;
-  pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false });
-
-  await pool.query(`
+  await getPool().query(`
     CREATE TABLE IF NOT EXISTS marketplace_listings (
       id SERIAL PRIMARY KEY,
       seller_id VARCHAR(64) NOT NULL,
@@ -41,7 +97,7 @@ async function initDb() {
     )
   `);
 
-  await pool.query(`
+  await getPool().query(`
     CREATE TABLE IF NOT EXISTS marketplace_threads (
       id SERIAL PRIMARY KEY,
       listing_id INTEGER NOT NULL,
@@ -81,7 +137,7 @@ function rowToListing(row) {
  */
 async function getAllListings() {
   if (useDatabase()) {
-    const { rows } = await pool.query('SELECT * FROM marketplace_listings ORDER BY created_at DESC');
+    const { rows } = await getPool().query('SELECT * FROM marketplace_listings ORDER BY created_at DESC');
     return rows.map(rowToListing);
   }
   return memoryListings;
@@ -92,7 +148,7 @@ async function getAllListings() {
  */
 async function insertListing(data) {
   if (useDatabase()) {
-    const { rows } = await pool.query(
+    const { rows } = await getPool().query(
       `INSERT INTO marketplace_listings
         (seller_id, seller_name, title, description, price, condition, category, meetup_spot, meetup_other, photos, course_tags, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'active') RETURNING *`,
@@ -122,7 +178,7 @@ async function insertListing(data) {
  */
 async function markListingSold(id) {
   if (useDatabase()) {
-    await pool.query(`UPDATE marketplace_listings SET status = 'sold' WHERE id = $1`, [id]);
+    await getPool().query(`UPDATE marketplace_listings SET status = 'sold' WHERE id = $1`, [id]);
     return;
   }
   memoryListings = memoryListings.map((l) => (String(l.id) === String(id) ? { ...l, status: 'sold' } : l));
@@ -142,7 +198,7 @@ function seedMemoryIfEmpty(seedFn) {
  */
 async function getOrCreateThread(listingId, buyer, sellerId, prefilled) {
   if (useDatabase()) {
-    const existing = await pool.query(
+    const existing = await getPool().query(
       'SELECT * FROM marketplace_threads WHERE listing_id = $1 AND buyer_id = $2',
       [listingId, buyer.id]
     );
@@ -150,7 +206,7 @@ async function getOrCreateThread(listingId, buyer, sellerId, prefilled) {
       return formatThread(existing.rows[0]);
     }
     const messages = [{ from: buyer.id, text: prefilled, at: new Date().toISOString() }];
-    const { rows } = await pool.query(
+    const { rows } = await getPool().query(
       `INSERT INTO marketplace_threads (listing_id, buyer_id, buyer_name, seller_id, messages)
        VALUES ($1,$2,$3,$4,$5) RETURNING *`,
       [listingId, buyer.id, buyer.name, sellerId, JSON.stringify(messages)]
@@ -181,11 +237,11 @@ async function getOrCreateThread(listingId, buyer, sellerId, prefilled) {
 async function appendThreadMessage(threadId, fromId, text) {
   const msg = { from: fromId, text, at: new Date().toISOString() };
   if (useDatabase()) {
-    const { rows } = await pool.query('SELECT * FROM marketplace_threads WHERE id = $1', [threadId]);
+    const { rows } = await getPool().query('SELECT * FROM marketplace_threads WHERE id = $1', [threadId]);
     if (!rows[0]) return null;
     const messages = rows[0].messages || [];
     messages.push(msg);
-    await pool.query('UPDATE marketplace_threads SET messages = $1 WHERE id = $2', [JSON.stringify(messages), threadId]);
+    await getPool().query('UPDATE marketplace_threads SET messages = $1 WHERE id = $2', [JSON.stringify(messages), threadId]);
     return formatThread({ ...rows[0], messages });
   }
   const thread = memoryThreads.find((t) => String(t.id) === String(threadId));
@@ -209,7 +265,10 @@ function formatThread(row) {
 }
 
 module.exports = {
+  query,
+  initDB,
   initDb,
+  pool: getPool,
   useDatabase,
   getAllListings,
   insertListing,
