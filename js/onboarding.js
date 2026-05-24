@@ -350,6 +350,10 @@
           '<input type="password" id="password-input" class="input-field"' +
             ' placeholder="' + (startLogin ? 'Your password' : 'At least 8 characters') + '"' +
             ' autocomplete="' + (startLogin ? 'current-password' : 'new-password') + '">' +
+          '<div id="confirm-wrap" style="' + (startLogin ? 'display:none;' : '') + 'margin-top:var(--space-md);">' +
+            '<label class="input-label" for="confirm-input">Confirm password</label>' +
+            '<input type="password" id="confirm-input" class="input-field" placeholder="Re-enter your password" autocomplete="new-password">' +
+          '</div>' +
           '<p id="email-error" class="onboarding__error" role="alert"></p>' +
         '</div>' +
         '<footer class="onboarding__footer">' +
@@ -359,45 +363,58 @@
         '</footer>' +
       '</section>';
 
-    var emailInput = document.getElementById('email-input');
-    var emailCheck = document.getElementById('email-check');
-    var emailError = document.getElementById('email-error');
-    var passwordInput = document.getElementById('password-input');
-    var continueBtn = document.getElementById('email-continue');
+    var emailInput   = document.getElementById('email-input');
+    var emailCheck   = document.getElementById('email-check');
+    var emailError   = document.getElementById('email-error');
+    var passwordInput  = document.getElementById('password-input');
+    var confirmInput   = document.getElementById('confirm-input');
+    var confirmWrap    = document.getElementById('confirm-wrap');
+    var continueBtn  = document.getElementById('email-continue');
 
-    /**
-     * Validates the email and password fields and toggles the continue button.
-     */
-    function validateEmail() {
-      var value = emailInput.value.trim();
-      var valid = isUcalgaryEmail(value);
-      var hasInput = value.length > 0;
-      var passwordOk = passwordInput.value.length >= 8;
+    function validate() {
+      var emailVal   = emailInput.value.trim();
+      var emailOk    = isUcalgaryEmail(emailVal);
+      var passVal    = passwordInput.value;
+      var passOk     = passVal.length >= 8;
+      var confirmVal = confirmInput ? confirmInput.value : '';
+      var confirmOk  = isLoginMode || confirmVal === passVal;
 
       emailInput.classList.remove('input-field--valid', 'input-field--invalid');
       emailCheck.classList.remove('onboarding__email-check--visible');
       emailError.textContent = '';
 
-      if (!hasInput) {
+      if (!emailVal) { continueBtn.disabled = true; return; }
+
+      if (!emailOk) {
+        emailInput.classList.add('input-field--invalid');
+        emailError.textContent = 'UNite is for UCalgary students. Use your @ucalgary.ca email.';
         continueBtn.disabled = true;
         return;
       }
 
-      if (valid && passwordOk) {
-        emailInput.classList.add('input-field--valid');
-        emailCheck.classList.add('onboarding__email-check--visible');
-        continueBtn.disabled = false;
-      } else if (!valid) {
-        emailInput.classList.add('input-field--invalid');
-        emailError.textContent = 'UNite is for UCalgary students. Use your @ucalgary.ca email.';
-        continueBtn.disabled = true;
+      emailInput.classList.add('input-field--valid');
+      emailCheck.classList.add('onboarding__email-check--visible');
+
+      if (!isLoginMode) {
+        if (!passOk) {
+          emailError.textContent = passVal.length > 0 ? 'Password must be at least 8 characters.' : '';
+          continueBtn.disabled = true;
+          return;
+        }
+        if (confirmVal && !confirmOk) {
+          emailError.textContent = 'Passwords do not match.';
+          continueBtn.disabled = true;
+          return;
+        }
+        continueBtn.disabled = !passOk || !confirmOk || confirmVal === '';
       } else {
-        continueBtn.disabled = true;
+        continueBtn.disabled = !passOk;
       }
     }
 
-    emailInput.addEventListener('input', validateEmail);
-    passwordInput.addEventListener('input', validateEmail);
+    emailInput.addEventListener('input', validate);
+    passwordInput.addEventListener('input', validate);
+    if (confirmInput) confirmInput.addEventListener('input', validate);
 
     var isLoginMode = new URLSearchParams(window.location.search).get('mode') === 'login';
 
@@ -419,7 +436,12 @@
       passwordInput.setAttribute('autocomplete', toLogin ? 'current-password' : 'new-password');
       continueBtn.textContent = toLogin ? 'Log In' : 'Create Account';
       emailError.textContent = '';
-      validateEmail();
+
+      // Show confirm field only on sign-up tab
+      if (confirmWrap) confirmWrap.style.display = toLogin ? 'none' : '';
+      if (confirmInput) confirmInput.value = '';
+
+      validate();
     }
 
     document.getElementById('tab-signup').addEventListener('click', function () { switchTab(false); });
