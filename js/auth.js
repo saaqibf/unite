@@ -102,17 +102,17 @@ async function fetchMe() {
   }
 }
 
-// Redirects to login if the user is not authenticated — call this at the top of protected pages
+// Redirects to onboarding if the user is not authenticated — call this at the top of protected pages
 function requireAuth() {
   if (!isLoggedIn()) {
-    window.location.href = '/login.html';
+    window.location.href = '/features/onboarding.html';
   }
 }
 
-// Redirects to dashboard if the user IS already logged in — call this on login/register pages
+// Redirects to Course Compass if the user IS already logged in — call this on login/register pages
 function redirectIfLoggedIn() {
   if (isLoggedIn()) {
-    window.location.href = '/features/dashboard.html';
+    window.location.href = '/features/course-compass.html';
   }
 }
 

@@ -687,8 +687,8 @@
     }
 
     if (!profile.primary_intent) {
-      window.location.href = '/';
-      return;
+      profile.primary_intent = 'course_compass';
+      localStorage.setItem(INTENT_KEY, 'course_compass');
     }
     renderScreen();
   }
