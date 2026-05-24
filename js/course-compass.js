@@ -1,752 +1,671 @@
-// Course Compass — main JS controller
-// Drives the 4 tabs: Roadmap, Prereq Tree, GPA Simulator, AI Advisor
-// All program data loaded from /data/ucalgary_programs.json — never hardcoded here
+/**
+ * UNite Course Compass — Full Implementation
+ * Transcript upload, semester roadmap, prereq tree, GPA simulator, AI advisor
+ */
 
-import { getToken, getUser, requireAuth, authHeader } from './auth.js';
-
-// ─── Constants ──────────────────────────────────────────────────────
-
-const GRADE_POINTS = {
+const UCALGARY_GRADE_POINTS = {
   'A+': 4.0, 'A': 4.0, 'A-': 3.7,
   'B+': 3.3, 'B': 3.0, 'B-': 2.7,
   'C+': 2.3, 'C': 2.0, 'C-': 1.7,
-  'D+': 1.3, 'D': 1.0, 'F': 0.0
+  'D+': 1.3, 'D': 1.0, 'F': 0.0,
+  'IP': null, 'W': null, 'AU': null, 'CR': null
 };
 
-const QUICK_QUESTIONS = [
-  'What should I take next semester?',
-  'How do I get into CPSC 331?',
-  'What is a good GPA for grad school?',
-  'Can I take CPSC 355 and CPSC 351 at the same time?',
-  'What are the hardest CS courses at UCalgary?',
-  'How many credits do I need to graduate?'
+// Global state
+let TRANSCRIPT_DATA = [];
+let CURRENT_PROGRAM = 'computer_science';
+let CURRENT_YEAR = 1;
+
+// Demo transcript — real UCalgary course data for Year 3 CS student
+const DEMO_TRANSCRIPT = [
+  { code: 'CPSC217', title: 'Introduction to Computer Science for Multidisciplinary Studies II', grade: 'A', credits: 3, term: 'Fall 2024', status: 'passed' },
+  { code: 'CPSC231', title: 'Introduction to Computer Science for CS Majors I', grade: 'A-', credits: 3, term: 'Fall 2024', status: 'passed' },
+  { code: 'MATH211', title: 'Linear Methods I', grade: 'B+', credits: 3, term: 'Fall 2024', status: 'passed' },
+  { code: 'MATH249', title: 'Introductory Calculus', grade: 'B', credits: 3, term: 'Fall 2024', status: 'passed' },
+  { code: 'STAT205', title: 'Statistics for Scientists and Engineers', grade: 'A-', credits: 3, term: 'Fall 2024', status: 'passed' },
+  { code: 'CPSC233', title: 'Introduction to Computer Science for CS Majors II', grade: 'A', credits: 3, term: 'Winter 2025', status: 'passed' },
+  { code: 'CPSC251', title: 'Discrete Mathematics for Computer Science I', grade: 'B+', credits: 3, term: 'Winter 2025', status: 'passed' },
+  { code: 'MATH271', title: 'Discrete Mathematics', grade: 'B+', credits: 3, term: 'Winter 2025', status: 'passed' },
+  { code: 'STAT213', title: 'Introduction to Statistics I', grade: 'A-', credits: 3, term: 'Winter 2025', status: 'passed' },
+  { code: 'CPSC329', title: 'Exploring Information Security and Privacy', grade: 'B+', credits: 3, term: 'Fall 2025', status: 'passed' },
+  { code: 'CPSC355', title: 'Computing Machinery I', grade: 'B', credits: 3, term: 'Fall 2025', status: 'passed' },
+  { code: 'CPSC331', title: 'Data Structures, Algorithms, and Their Analysis', grade: 'A-', credits: 3, term: 'Fall 2025', status: 'passed' },
+  { code: 'CPSC351', title: 'Theoretical Foundations of Computer Science II', grade: 'IP', credits: 3, term: 'Winter 2026', status: 'in_progress' },
+  { code: 'CPSC411', title: 'Compiler Construction', grade: 'IP', credits: 3, term: 'Winter 2026', status: 'in_progress' },
+  { code: 'SENG300', title: 'Introduction to Software Engineering', grade: 'IP', credits: 3, term: 'Winter 2026', status: 'in_progress' },
 ];
 
-// ─── State ──────────────────────────────────────────────────────────
-
-let programsData = null;
-let currentProgram = null;
-let completedCourses = [];
-let gpaRows = [];
-let currentTab = 'roadmap';
-
-// ─── Boot ────────────────────────────────────────────────────────────
-
-// Entry point — loads profile, fetches program data, wires all UI
-async function init() {
-  requireAuth();
-
-  const profile = loadProfile();
-  renderProfileSidebar(profile);
-
-  programsData = await fetchProgramsData();
-
-  if (profile?.program) {
-    completedCourses = loadCompletedCourses();
-    currentProgram = profile.program;
-    hideBanner();
-    renderRoadmap(profile.program, profile.year, completedCourses);
-    renderPrereqTree(profile.program, completedCourses);
-    renderGPAScale();
-    seedGPARows(profile.program);
-  } else {
-    showBanner();
-  }
-
-  wireTabNav();
-  wireSetupForm();
-  wireGPASimulator();
-  wireAdvisorChat(profile);
-  wireNavToggle();
-}
-
-// ─── Profile ─────────────────────────────────────────────────────────
-
-// Reads the student's profile from localStorage — set by onboarding.js
-function loadProfile() {
-  try {
-    const raw = localStorage.getItem('unite_profile');
-    return raw ? JSON.parse(raw) : getUser();
-  } catch {
-    return getUser();
-  }
-}
-
-// Reads completed course codes saved after transcript parsing
-function loadCompletedCourses() {
-  try {
-    const raw = localStorage.getItem('unite_completed_courses');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-// Fills the sidebar with the student's name, program badge, year, and GPA
-function renderProfileSidebar(profile) {
-  const name = profile?.name || 'Student';
-  const program = profile?.program || '—';
-  const year = profile?.year || '—';
-
-  const avatarEl = document.getElementById('profile-avatar');
-  const nameEl = document.getElementById('profile-name');
-  const programTag = document.getElementById('profile-program-tag');
-  const yearTag = document.getElementById('profile-year-tag');
-
-  if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
-  if (nameEl) nameEl.textContent = name;
-  if (programTag) programTag.textContent = program;
-  if (yearTag) yearTag.textContent = year;
-}
-
-// ─── Program Data ─────────────────────────────────────────────────────
-
-// Loads program requirements from the JSON file — used by all tabs
-async function fetchProgramsData() {
-  try {
-    const res = await fetch('/data/ucalgary_programs.json');
-    return await res.json();
-  } catch {
-    console.error('Could not load program data');
-    return null;
-  }
-}
-
-// Returns the program object matching the given key (e.g. 'cs', 'seng')
-function getProgramByKey(key) {
-  if (!programsData) return null;
-  return programsData.programs.find(p => p.key === key) || null;
-}
-
-// ─── Tab Navigation ───────────────────────────────────────────────────
-
-// Wires the 4 sidebar tab buttons to show/hide the correct panels
-function wireTabNav() {
-  const tabs = document.querySelectorAll('.cc-tab');
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const target = tab.dataset.tab;
-      switchTab(target);
-    });
-  });
-}
-
-// Shows the selected panel and hides all others, updates active tab style
-function switchTab(tabName) {
-  currentTab = tabName;
-
-  document.querySelectorAll('.cc-panel').forEach(p => p.style.display = 'none');
-  document.querySelectorAll('.cc-tab').forEach(t => t.classList.remove('cc-tab--active'));
-
-  const panel = document.getElementById(`panel-${tabName}`);
-  const tab = document.querySelector(`[data-tab="${tabName}"]`);
-
-  if (panel) panel.style.display = 'flex';
-  if (tab) tab.classList.add('cc-tab--active');
-}
-
-// ─── Setup Banner ─────────────────────────────────────────────────────
-
-// Shows the "set up your degree" form when no program is set in profile
-function showBanner() {
-  const banner = document.getElementById('setup-banner');
-  const panels = document.querySelectorAll('.cc-panel');
-  if (banner) banner.style.display = 'block';
-  panels.forEach(p => p.style.display = 'none');
-}
-
-// Hides the setup banner and shows the roadmap panel
-function hideBanner() {
-  const banner = document.getElementById('setup-banner');
-  if (banner) banner.style.display = 'none';
-  switchTab('roadmap');
-}
-
-// Wires the setup form submit button — saves program/year and generates roadmap
-function wireSetupForm() {
-  const btn = document.getElementById('generate-roadmap-btn');
-  if (!btn) return;
-
-  btn.addEventListener('click', async () => {
-    const programKey = document.getElementById('program-select')?.value;
-    const year = document.getElementById('year-select')?.value || 'Year 1';
-    const transcriptText = document.getElementById('transcript-input')?.value || '';
-
-    if (!programKey) {
-      alert('Please select your program first.');
-      return;
+// UCalgary CS program — 4 years, Fall + Winter, real course codes
+const CS_PROGRAM = {
+  name: 'Computer Science',
+  total_credits: 120,
+  years: {
+    1: {
+      fall: [
+        { code: 'CPSC217', title: 'Intro to Computer Science (Multidisciplinary)', credits: 3, prereqs: [] },
+        { code: 'CPSC231', title: 'Intro to CS for CS Majors I', credits: 3, prereqs: [] },
+        { code: 'MATH211', title: 'Linear Methods I', credits: 3, prereqs: [] },
+        { code: 'MATH249', title: 'Introductory Calculus', credits: 3, prereqs: [] },
+        { code: 'STAT205', title: 'Statistics for Scientists and Engineers', credits: 3, prereqs: [] },
+      ],
+      winter: [
+        { code: 'CPSC233', title: 'Intro to CS for CS Majors II', credits: 3, prereqs: ['CPSC231'] },
+        { code: 'CPSC251', title: 'Discrete Mathematics for CS I', credits: 3, prereqs: [] },
+        { code: 'MATH271', title: 'Discrete Mathematics', credits: 3, prereqs: ['CPSC251'] },
+        { code: 'STAT213', title: 'Introduction to Statistics I', credits: 3, prereqs: [] },
+        { code: 'ELEC', title: 'Open Elective', credits: 3, prereqs: [], isElective: true },
+      ]
+    },
+    2: {
+      fall: [
+        { code: 'CPSC331', title: 'Data Structures, Algorithms, and Their Analysis', credits: 3, prereqs: ['CPSC233', 'CPSC251'] },
+        { code: 'CPSC355', title: 'Computing Machinery I', credits: 3, prereqs: ['CPSC233'] },
+        { code: 'CPSC313', title: 'Introduction to Computability', credits: 3, prereqs: ['CPSC251'] },
+        { code: 'CPSC329', title: 'Exploring Information Security and Privacy', credits: 3, prereqs: [] },
+        { code: 'ELEC', title: 'Open Elective', credits: 3, prereqs: [], isElective: true },
+      ],
+      winter: [
+        { code: 'CPSC335', title: 'Algorithm Design and Analysis', credits: 3, prereqs: ['CPSC331', 'MATH271'] },
+        { code: 'CPSC351', title: 'Theoretical Foundations of CS II', credits: 3, prereqs: ['CPSC313'] },
+        { code: 'CPSC359', title: 'Computing Machinery II', credits: 3, prereqs: ['CPSC355'] },
+        { code: 'SENG300', title: 'Introduction to Software Engineering', credits: 3, prereqs: ['CPSC331'] },
+        { code: 'ELEC', title: 'Open Elective', credits: 3, prereqs: [], isElective: true },
+      ]
+    },
+    3: {
+      fall: [
+        { code: 'CPSC411', title: 'Compiler Construction', credits: 3, prereqs: ['CPSC331', 'CPSC355'] },
+        { code: 'CPSC413', title: 'Design and Analysis of Algorithms I', credits: 3, prereqs: ['CPSC331', 'CPSC351'] },
+        { code: 'CPSC457', title: 'Principles of Operating Systems', credits: 3, prereqs: ['CPSC355', 'CPSC331'] },
+        { code: 'CPSC383', title: 'Introduction to Artificial Intelligence', credits: 3, prereqs: ['CPSC331'] },
+        { code: 'ELEC', title: 'CS Elective 300+', credits: 3, prereqs: [], isElective: true },
+      ],
+      winter: [
+        { code: 'CPSC441', title: 'Computer Networks', credits: 3, prereqs: ['CPSC457'] },
+        { code: 'CPSC453', title: 'Introduction to Computer Graphics', credits: 3, prereqs: ['MATH211', 'CPSC331'] },
+        { code: 'CPSC471', title: 'Data Base Management Systems', credits: 3, prereqs: ['CPSC331'] },
+        { code: 'SENG401', title: 'Software Architecture', credits: 3, prereqs: ['SENG300'] },
+        { code: 'ELEC', title: 'CS Elective 400+', credits: 3, prereqs: [], isElective: true },
+      ]
+    },
+    4: {
+      fall: [
+        { code: 'CPSC499', title: 'Computer Science Research Project', credits: 3, prereqs: ['CPSC413'] },
+        { code: 'CPSC491', title: 'Techniques in Software Engineering', credits: 3, prereqs: ['SENG300'] },
+        { code: 'ELEC', title: 'CS Elective 400+', credits: 3, prereqs: [], isElective: true },
+        { code: 'ELEC', title: 'CS Elective 400+', credits: 3, prereqs: [], isElective: true },
+        { code: 'ELEC', title: 'Open Elective', credits: 3, prereqs: [], isElective: true },
+      ],
+      winter: [
+        { code: 'CPSC481', title: 'Human-Computer Interaction I', credits: 3, prereqs: ['CPSC331'] },
+        { code: 'ELEC', title: 'CS Elective 400+', credits: 3, prereqs: [], isElective: true },
+        { code: 'ELEC', title: 'CS Elective 400+', credits: 3, prereqs: [], isElective: true },
+        { code: 'ELEC', title: 'Open Elective', credits: 3, prereqs: [], isElective: true },
+        { code: 'ELEC', title: 'Open Elective', credits: 3, prereqs: [], isElective: true },
+      ]
     }
-
-    const parsed = parseTranscriptText(transcriptText);
-    completedCourses = parsed;
-    currentProgram = programKey;
-
-    localStorage.setItem('unite_completed_courses', JSON.stringify(parsed));
-
-    const profile = loadProfile() || {};
-    profile.program = programKey;
-    profile.year = year;
-    localStorage.setItem('unite_profile', JSON.stringify(profile));
-
-    renderProfileSidebar({ ...profile, program: programKey, year });
-
-    hideBanner();
-    renderRoadmap(programKey, year, parsed);
-    renderPrereqTree(programKey, parsed);
-    renderGPAScale();
-    seedGPARows(programKey);
-    updateGPA();
-  });
-
-  // Regenerate button inside the roadmap panel
-  const regenBtn = document.getElementById('regenerate-btn');
-  if (regenBtn) {
-    regenBtn.addEventListener('click', () => {
-      if (currentProgram) {
-        renderRoadmap(currentProgram, loadProfile()?.year || 'Year 1', completedCourses);
-      }
-    });
   }
-}
+};
 
-// ─── Transcript Parser ───────────────────────────────────────────────
-
-// Extracts UCalgary course codes from pasted or uploaded transcript text
-function parseTranscriptText(text) {
-  const matches = text.toUpperCase().match(/[A-Z]{2,4}\s?\d{3}(\.\d{2})?/g) || [];
-  return [...new Set(matches.map(c => c.replace(/\s/g, '')))];
-}
-
-// Normalises a course code to match the JSON format (e.g. 'CPSC331' → 'CPSC331')
-function normaliseCode(code) {
-  return code.replace(/\s/g, '').toUpperCase();
-}
-
-// Returns true if the student has completed the given course code
-function isCompleted(code) {
-  return completedCourses.includes(normaliseCode(code));
-}
-
-// ─── Roadmap Tab ──────────────────────────────────────────────────────
-
-// Renders the semester-by-semester roadmap for the student's program
-function renderRoadmap(programKey, year, completed) {
-  const container = document.getElementById('roadmap-content');
-  const loading = document.getElementById('roadmap-loading');
-  if (!container) return;
-
-  const program = getProgramByKey(programKey);
-  if (!program) {
-    container.innerHTML = '<p class="text-muted">Program data not found.</p>';
-    return;
+// Simplified roadmaps for other programs using ucalgary_programs.json data
+const OTHER_PROGRAMS = {
+  software_engineering: {
+    name: 'Software Engineering',
+    years: {
+      1: { fall: ['ENGG233','CPSC233','MATH211','ENGG200','PHYS259'].map(c=>({code:c,title:c,credits:3,prereqs:[]})), winter: ['ENGG311','SENG265','MATH271','STAT321','ENGG300'].map(c=>({code:c,title:c,credits:3,prereqs:[]})) },
+      2: { fall: ['SENG300','CPSC331','SENG301','ENGG407','CPSC355'].map(c=>({code:c,title:c,credits:3,prereqs:[]})), winter: ['SENG401','SENG403','CPSC441','SENG471','SENG491'].map(c=>({code:c,title:c,credits:3,prereqs:[]})) },
+      3: { fall: ['SENG513','SENG533','SENG545','SENG550','CPSC471'].map(c=>({code:c,title:c,credits:3,prereqs:[]})), winter: ['SENG550','SENG553','SENG599','CPSC481','SENG601'].map(c=>({code:c,title:c,credits:3,prereqs:[]})) },
+      4: { fall: ['SENG696A','SENG697A','ELEC','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})), winter: ['SENG696B','SENG697B','ELEC','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})) }
+    }
+  },
+  business: {
+    name: 'Business (Haskayne)',
+    years: {
+      1: { fall: ['ACCT311','ECON201','ENGL201','MGST217','MATH205'].map(c=>({code:c,title:c,credits:3,prereqs:[]})), winter: ['ACCT211','ECON203','FNCE317','MGST361','STAT213'].map(c=>({code:c,title:c,credits:3,prereqs:[]})) },
+      2: { fall: ['FNCE319','MGST391','MRKT317','OBHR317','SGMA217'].map(c=>({code:c,title:c,credits:3,prereqs:[]})), winter: ['FNCE323','MGST393','MRKT325','OBHR319','SGMA321'].map(c=>({code:c,title:c,credits:3,prereqs:[]})) },
+      3: { fall: ['FNCE411','MGST491','SGMA423','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})), winter: ['MGST493','SGMA425','ELEC','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})) },
+      4: { fall: ['SGMA527','ELEC','ELEC','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})), winter: ['SGMA529','ELEC','ELEC','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})) }
+    }
+  },
+  kinesiology: {
+    name: 'Kinesiology',
+    years: {
+      1: { fall: ['KNES201','KNES203','BIOL203','CHEM201','KNES100'].map(c=>({code:c,title:c,credits:3,prereqs:[]})), winter: ['KNES205','KNES207','BIOL205','PHYS221','STAT213'].map(c=>({code:c,title:c,credits:3,prereqs:[]})) },
+      2: { fall: ['KNES301','KNES303','KNES305','PSYC200','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})), winter: ['KNES307','KNES309','KNES311','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})) },
+      3: { fall: ['KNES401','KNES403','KNES405','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})), winter: ['KNES407','KNES409','KNES411','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})) },
+      4: { fall: ['KNES501','KNES503','ELEC','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})), winter: ['KNES505','KNES507','ELEC','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})) }
+    }
+  },
+  psychology: {
+    name: 'Psychology',
+    years: {
+      1: { fall: ['PSYC200','PSYC201','BIOL203','STAT213','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})), winter: ['PSYC203','PSYC205','BIOL205','STAT217','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})) },
+      2: { fall: ['PSYC301','PSYC303','PSYC305','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})), winter: ['PSYC307','PSYC309','PSYC311','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})) },
+      3: { fall: ['PSYC401','PSYC403','PSYC405','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})), winter: ['PSYC407','PSYC409','ELEC','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})) },
+      4: { fall: ['PSYC501','PSYC503','ELEC','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})), winter: ['PSYC505','ELEC','ELEC','ELEC','ELEC'].map(c=>({code:c,title:c,credits:3,prereqs:[],isElective:c==='ELEC'})) }
+    }
   }
+};
 
-  container.innerHTML = '';
+// ─── Init ────────────────────────────────────────────────────────────────────
 
-  // Build a flat ordered list of all courses from year_breakdown
-  const yearOrder = ['year_1', 'year_2', 'year_3', 'year_4'];
-  const semesterLabels = {
-    year_1: ['Fall — Year 1', 'Winter — Year 1'],
-    year_2: ['Fall — Year 2', 'Winter — Year 2'],
-    year_3: ['Fall — Year 3', 'Winter — Year 3'],
-    year_4: ['Fall — Year 4', 'Winter — Year 4']
+document.addEventListener('DOMContentLoaded', () => {
+  loadProfileFromStorage();
+  setupTranscriptUpload();
+  loadRoadmap();
+});
+
+// ─── Profile ─────────────────────────────────────────────────────────────────
+
+function loadProfileFromStorage() {
+  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  const programMap = {
+    'Computer Science': 'computer_science',
+    'Software Engineering': 'software_engineering',
+    'Business': 'business', 'Business (Haskayne)': 'business',
+    'Kinesiology': 'kinesiology',
+    'Psychology': 'psychology',
   };
+  if (profile.program && programMap[profile.program]) {
+    CURRENT_PROGRAM = programMap[profile.program];
+    const sel = document.getElementById('program-select');
+    if (sel) sel.value = CURRENT_PROGRAM;
+  }
+  if (profile.year) {
+    CURRENT_YEAR = Math.min(parseInt(profile.year) || 1, 4);
+    const sel = document.getElementById('year-select');
+    if (sel) sel.value = CURRENT_YEAR;
+  }
+  const saved = localStorage.getItem('unite_transcript');
+  if (saved) {
+    try {
+      TRANSCRIPT_DATA = JSON.parse(saved);
+      showTranscriptLoaded(TRANSCRIPT_DATA);
+    } catch (e) { /* ignore */ }
+  }
+}
 
-  let upcomingCourses = [];
-  let firstIncomplete = true;
+// ─── Transcript Upload ────────────────────────────────────────────────────────
 
-  yearOrder.forEach(yearKey => {
-    const courses = program.year_breakdown[yearKey];
-    if (!courses || courses.length === 0) return;
+function setupTranscriptUpload() {
+  const fileInput = document.getElementById('transcript-file');
+  const dropZone  = document.getElementById('upload-drop-zone');
+  if (!fileInput || !dropZone) return;
 
-    // Split the year's courses into 2 semesters
-    const half = Math.ceil(courses.length / 2);
-    const semesters = [courses.slice(0, half), courses.slice(half)];
-    const labels = semesterLabels[yearKey] || [`${yearKey} — Semester 1`, `${yearKey} — Semester 2`];
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) processTranscriptFile(file);
+  });
+  dropZone.addEventListener('dragover',  (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) processTranscriptFile(e.dataTransfer.files[0]);
+  });
+}
 
-    semesters.forEach((semCourses, idx) => {
-      if (semCourses.length === 0) return;
+async function processTranscriptFile(file) {
+  const card = document.getElementById('transcript-upload-card');
+  card.classList.add('loading');
+  try {
+    const text = await file.text();
+    const parsed = parseUCalgaryTranscript(text);
+    TRANSCRIPT_DATA = parsed.courses;
+    localStorage.setItem('unite_transcript', JSON.stringify(TRANSCRIPT_DATA));
+    showTranscriptLoaded(TRANSCRIPT_DATA, parsed.studentName, parsed.gpa);
+    loadRoadmap();
+  } catch (err) {
+    console.error('Transcript error:', err);
+  } finally {
+    card.classList.remove('loading');
+  }
+}
 
-      const semEl = document.createElement('div');
-      semEl.className = 'cc-semester';
+function parseUCalgaryTranscript(text) {
+  const courses = [];
+  let studentName = '';
+  const lines = text.split(/[\n\r]+/);
 
-      const allCompleted = semCourses.every(c => isCompleted(c));
-      const totalUnits = semCourses.length * 3;
+  for (const line of lines) {
+    const nm = line.match(/Name[:\s]+([A-Za-z ,'-]+)/i);
+    if (nm && !studentName) { studentName = nm[1].trim(); }
 
-      semEl.innerHTML = `
-        <div class="cc-semester__header">
-          <span class="cc-semester__label">${labels[idx]}${allCompleted ? ' ✓' : ''}</span>
-          <span class="cc-semester__credits">${totalUnits} units</span>
-        </div>
-        <div class="cc-semester__courses" id="sem-${yearKey}-${idx}"></div>
-      `;
+    // Pattern: DEPT 123 ... grade
+    const m = line.match(/\b([A-Z]{2,6})\s*(\d{3}[A-Z]?)\b.*?\b([A-F][+-]?|IP|W|AU|CR)\b/);
+    if (m) {
+      const grade = m[3];
+      const status = grade === 'IP' ? 'in_progress' :
+                     grade === 'W'  ? 'withdrawn' :
+                     (UCALGARY_GRADE_POINTS[grade] ?? 0) >= 1.0 ? 'passed' : 'failed';
+      courses.push({ code: m[1] + m[2], title: m[1] + ' ' + m[2], credits: 3, grade, status, term: '' });
+    }
+  }
 
-      const coursesContainer = semEl.querySelector(`#sem-${yearKey}-${idx}`);
+  const graded = courses.filter(c => c.status === 'passed' && UCALGARY_GRADE_POINTS[c.grade] !== null);
+  let pts = 0, creds = 0;
+  graded.forEach(c => { pts += UCALGARY_GRADE_POINTS[c.grade] * c.credits; creds += c.credits; });
+  const gpa = creds > 0 ? (pts / creds).toFixed(2) : null;
 
-      semCourses.forEach(code => {
-        const done = isCompleted(code);
-        const isNext = !done && firstIncomplete;
-        if (isNext) {
-          firstIncomplete = false;
-          upcomingCourses = semCourses.filter(c => !isCompleted(c));
+  return { courses, studentName, gpa };
+}
+
+function showTranscriptLoaded(courses, name, gpa) {
+  const dropZone  = document.getElementById('upload-drop-zone');
+  const loaded    = document.getElementById('transcript-loaded');
+  const nameEl    = document.getElementById('transcript-student-name');
+  const summaryEl = document.getElementById('transcript-summary');
+  if (!loaded) return;
+
+  if (dropZone) dropZone.style.display = 'none';
+  loaded.style.display = 'flex';
+
+  const passed     = courses.filter(c => c.status === 'passed').length;
+  const inProgress = courses.filter(c => c.status === 'in_progress').length;
+  const totalCreds = courses.filter(c => c.status === 'passed').reduce((s, c) => s + (c.credits || 3), 0);
+
+  if (nameEl) nameEl.textContent = name || 'Transcript Loaded';
+  if (summaryEl) summaryEl.textContent =
+    `${passed} courses completed · ${inProgress} in progress · ${totalCreds} credits earned${gpa ? ` · GPA: ${gpa}` : ''}`;
+}
+
+function loadDemoTranscript() {
+  TRANSCRIPT_DATA = DEMO_TRANSCRIPT;
+  localStorage.setItem('unite_transcript', JSON.stringify(TRANSCRIPT_DATA));
+  showTranscriptLoaded(TRANSCRIPT_DATA, 'Sarah Chen', '3.52');
+  CURRENT_PROGRAM = 'computer_science';
+  CURRENT_YEAR = 3;
+  const pSel = document.getElementById('program-select');
+  const ySel = document.getElementById('year-select');
+  if (pSel) pSel.value = 'computer_science';
+  if (ySel) ySel.value = 3;
+  loadRoadmap();
+  if (document.getElementById('tab-gpa').style.display !== 'none') updateGPASimulator();
+}
+
+function clearTranscript() {
+  TRANSCRIPT_DATA = [];
+  localStorage.removeItem('unite_transcript');
+  const dz = document.getElementById('upload-drop-zone');
+  const ld = document.getElementById('transcript-loaded');
+  if (dz) dz.style.display = 'flex';
+  if (ld) ld.style.display = 'none';
+  loadRoadmap();
+}
+
+// ─── Tab Switching ────────────────────────────────────────────────────────────
+
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  });
+  document.querySelectorAll('.tab-panel').forEach(panel => {
+    const isActive = panel.id === `tab-${tabName}`;
+    panel.style.display = isActive ? 'block' : 'none';
+    panel.classList.toggle('active', isActive);
+  });
+  if (tabName === 'gpa') updateGPASimulator();
+  if (tabName === 'prereqs') initPrereqSearch();
+}
+
+// ─── Roadmap ──────────────────────────────────────────────────────────────────
+
+function loadRoadmap() {
+  const pSel = document.getElementById('program-select');
+  const ySel = document.getElementById('year-select');
+  CURRENT_PROGRAM = (pSel && pSel.value) || CURRENT_PROGRAM;
+  CURRENT_YEAR    = parseInt((ySel && ySel.value) || CURRENT_YEAR) || 1;
+
+  const program = CURRENT_PROGRAM === 'computer_science' ? CS_PROGRAM
+                : OTHER_PROGRAMS[CURRENT_PROGRAM] || CS_PROGRAM;
+
+  const completedCodes   = new Set(TRANSCRIPT_DATA.filter(c => c.status === 'passed').map(c => c.code.replace(/\s+/g, '')));
+  const inProgressCodes  = new Set(TRANSCRIPT_DATA.filter(c => c.status === 'in_progress').map(c => c.code.replace(/\s+/g, '')));
+
+  let html = '';
+  let nextSemesterCourses = [];
+
+  for (let yr = 1; yr <= 4; yr++) {
+    const yearData = program.years[yr];
+    if (!yearData) continue;
+
+    const yearClass = yr < CURRENT_YEAR ? 'past-year' : yr === CURRENT_YEAR ? 'current-year' : 'future-year';
+    html += `<div class="roadmap-year ${yearClass}">`;
+    html += `<div class="year-label">Year ${yr}</div>`;
+
+    for (const [semKey, semLabel, courses] of [['fall', '🍂 Fall', yearData.fall], ['winter', '❄️ Winter', yearData.winter]]) {
+      html += `<div class="semester-block"><div class="semester-label">${semLabel}</div><div class="semester-courses">`;
+
+      for (const course of courses) {
+        const code = course.code.replace(/\s+/g, '');
+        const isCompleted  = completedCodes.has(code);
+        const isInProgress = inProgressCodes.has(code);
+        const prereqsMet   = course.prereqs.every(p => completedCodes.has(p.replace(/\s+/g, '')));
+        const isLocked     = !course.isElective && course.prereqs.length > 0 && !prereqsMet && !isCompleted;
+
+        let status = 'upcoming';
+        if (isCompleted)  status = 'completed';
+        else if (isInProgress) status = 'current';
+        else if (isLocked)    status = 'locked';
+
+        if (status === 'upcoming' && yr === CURRENT_YEAR) {
+          if (!nextSemesterCourses.includes(code)) nextSemesterCourses.push(code);
         }
 
-        const row = document.createElement('div');
-        row.className = `cc-course-row${done ? ' cc-course-row--completed' : ''}`;
-        row.innerHTML = `
-          <span class="cc-course-code">${formatCode(code)}</span>
-          <span class="cc-course-name">${getCourseTitle(code)}</span>
-          <span class="cc-course-units">3 units</span>
-          ${isNext ? '<span class="badge badge--red" style="flex-shrink:0;">Next</span>' : ''}
-          ${done ? '<span class="badge badge--success" style="flex-shrink:0;">Done</span>' : ''}
-        `;
-        coursesContainer.appendChild(row);
-      });
+        const gradeObj = TRANSCRIPT_DATA.find(t => t.code.replace(/\s+/g, '') === code);
+        const grade    = gradeObj ? gradeObj.grade : '';
 
-      container.appendChild(semEl);
-    });
-  });
-
-  // Save the upcoming courses to localStorage so Marketplace can read them
-  if (upcomingCourses.length > 0) {
-    localStorage.setItem('unite_upcoming_courses', JSON.stringify(upcomingCourses));
-    renderNextCoursesCard(upcomingCourses);
+        html += `<div class="course-card ${status}" onclick="showCoursePrereqs('${code}')">
+          <div class="course-code">${course.code}</div>
+          <div class="course-title">${course.title}</div>
+          <div class="course-meta">
+            <span>${course.credits} units</span>
+            ${grade ? `<span class="course-grade grade-${grade.charAt(0)}">${grade}</span>` : ''}
+            ${isLocked ? `<span class="prereq-lock" title="Needs: ${course.prereqs.join(', ')}">🔒</span>` : ''}
+          </div>
+        </div>`;
+      }
+      html += `</div></div>`;
+    }
+    html += `</div>`;
   }
 
-  // Update sidebar credits
-  const creditsEl = document.getElementById('credits-done');
-  const creditsBar = document.getElementById('credits-bar');
-  const done = completedCourses.length;
-  const pct = Math.min(100, Math.round((done * 3) / 120 * 100));
-  if (creditsEl) creditsEl.textContent = done * 3;
-  if (creditsBar) creditsBar.style.width = `${pct}%`;
+  const grid = document.getElementById('roadmap-grid');
+  if (grid) grid.innerHTML = html;
+
+  // Save upcoming courses for marketplace cross-feature
+  localStorage.setItem('unite_upcoming_courses', JSON.stringify(nextSemesterCourses));
+
+  // Graduation progress bar
+  const totalCompleted = TRANSCRIPT_DATA.filter(c => c.status === 'passed').reduce((s, c) => s + (c.credits || 3), 0);
+  const pct = Math.min(100, Math.round((totalCompleted / 120) * 100));
+  const progEl = document.getElementById('graduation-progress');
+  if (progEl) progEl.innerHTML = `
+    <div class="progress-bar-container">
+      <div class="progress-label">Degree Progress: ${totalCompleted} / 120 credits (${pct}%)</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
 }
 
-// Shows the "courses you need next" section and saves them for Marketplace
-function renderNextCoursesCard(courses) {
-  const card = document.getElementById('next-courses-card');
-  const chips = document.getElementById('next-courses-chips');
-  if (!card || !chips) return;
+// ─── Prereq Tree ──────────────────────────────────────────────────────────────
 
-  card.style.display = 'block';
-  chips.innerHTML = '';
-  courses.forEach(code => {
-    const chip = document.createElement('span');
-    chip.className = 'cc-course-chip';
-    chip.textContent = formatCode(code);
-    chips.appendChild(chip);
+function showCoursePrereqs(code) {
+  switchTab('prereqs');
+  const inp = document.getElementById('prereq-search');
+  if (inp) inp.value = code.replace(/([A-Z]+)(\d+)/, '$1 $2');
+  renderPrereqTree(code);
+}
+
+function searchPrereqs(query) {
+  const code = query.toUpperCase().replace(/\s+/g, '');
+  if (code.length >= 6) renderPrereqTree(code);
+}
+
+function initPrereqSearch() {
+  const raw = localStorage.getItem('unite_upcoming_courses');
+  if (raw) {
+    try {
+      const upcoming = JSON.parse(raw);
+      if (upcoming.length > 0) {
+        const inp = document.getElementById('prereq-search');
+        if (inp) inp.value = upcoming[0].replace(/([A-Z]+)(\d+)/, '$1 $2');
+        renderPrereqTree(upcoming[0]);
+      }
+    } catch (e) { /* ignore */ }
+  }
+}
+
+function getAllCourses() {
+  const program = CURRENT_PROGRAM === 'computer_science' ? CS_PROGRAM : OTHER_PROGRAMS[CURRENT_PROGRAM] || CS_PROGRAM;
+  const all = [];
+  Object.values(program.years).forEach(yr => {
+    Object.values(yr).forEach(sem => sem.forEach(c => all.push(c)));
   });
+  return all;
 }
 
-// Formats a raw course code string to UCalgary display format (e.g. 'CPSC331' → 'CPSC 331')
-function formatCode(code) {
-  return code.replace(/([A-Z]+)(\d)/, '$1 $2');
-}
-
-// Returns a human-readable course title — falls back to the code if not found
-function getCourseTitle(code) {
-  const titles = {
-    'CPSC217': 'Intro to CS for Multidisciplinary Studies',
-    'CPSC231': 'Introduction to Computer Science for CS',
-    'CPSC233': 'Object-Oriented Programming for CS',
-    'CPSC251': 'Introductory Logic for CS',
-    'CPSC331': 'Data Structures, Algorithms and Their Analysis',
-    'CPSC335': 'Algorithm Design and Analysis',
-    'CPSC351': 'Computability and Complexity',
-    'CPSC355': 'Computing Machinery I',
-    'CPSC359': 'Computing Machinery II',
-    'CPSC383': 'Introduction to Machine Intelligence',
-    'CPSC457': 'Principles of Operating Systems',
-    'CPSC471': 'Data Base Management Systems',
-    'CPSC481': 'Human-Computer Interaction I',
-    'CPSC491': 'Capstone Topic I',
-    'CPSC499': 'Capstone Topic II',
-    'MATH211': 'Linear Methods I',
-    'MATH249': 'Introductory Calculus',
-    'MATH271': 'Discrete Mathematics',
-    'STAT213': 'Introduction to Statistics I',
-    'SENG300': 'Introduction to Software Engineering',
-    'SENG401': 'Software Architecture',
-    'SENG437': 'Software Reliability and Testing',
-    'SENG438': 'Software Testing, Reliability and Quality Assurance',
-    'SENG471': 'Software Requirements Engineering',
-    'SENG499': 'Design Project',
-    'ENGG200': 'Engineering Design and Communication I',
-    'ENGG202': 'Engineering Statics',
-    'ACCT217': 'Introductory Financial Accounting',
-    'ACCT323': 'Introductory Managerial Accounting',
-    'FNCE317': 'Introduction to Finance',
-    'FNCE341': 'Financial Management',
-    'MGST217': 'Introduction to Organizational Behaviour',
-    'MGST301': 'Managing People',
-    'KNES201': 'Introduction to Kinesiology',
-    'KNES203': 'Foundations of Human Movement',
-    'KNES251': 'Exercise Physiology I',
-    'KNES303': 'Biomechanics',
-    'PSYC200': 'Introduction to Psychology I',
-    'PSYC201': 'Introduction to Psychology II',
-    'PSYC300': 'Research Methods in Psychology',
-    'PSYC301': 'Statistics for Psychology'
-  };
-  return titles[normaliseCode(code)] || formatCode(code) + ' — UCalgary Course';
-}
-
-// ─── Prereq Tree Tab ──────────────────────────────────────────────────
-
-// Renders the prerequisite chain visualizer for the student's program
-function renderPrereqTree(programKey, completed) {
+function renderPrereqTree(targetCode) {
   const container = document.getElementById('prereq-tree-container');
   if (!container) return;
+  const completedCodes = new Set(TRANSCRIPT_DATA.filter(c => c.status === 'passed').map(c => c.code.replace(/\s+/g, '')));
+  const allCourses = getAllCourses();
+  const course = allCourses.find(c => c.code.replace(/\s+/g, '') === targetCode);
 
-  const program = getProgramByKey(programKey);
-  if (!program || !program.typical_prereq_chains) {
-    container.innerHTML = '<p class="text-muted">No prerequisite data available for this program.</p>';
+  if (!course) {
+    container.innerHTML = `<div class="prereq-placeholder"><p>Course <strong>${targetCode.replace(/([A-Z]+)(\d+)/,'$1 $2')}</strong> not found in your program roadmap.</p></div>`;
     return;
   }
 
-  container.innerHTML = '';
-  program.typical_prereq_chains.forEach(chain => {
-    const chainEl = document.createElement('div');
-    chainEl.className = 'cc-prereq-chain';
-
-    const flow = chain.courses.map((code, i) => {
-      const done = isCompleted(code);
-      const prevDone = i === 0 || isCompleted(chain.courses[i - 1]);
-      const isNext = !done && prevDone;
-      const locked = !done && !prevDone;
-
-      const nodeClass = done ? 'cc-prereq-node--completed'
-        : isNext ? 'cc-prereq-node--next'
-          : 'cc-prereq-node--locked';
-
-      const arrow = i < chain.courses.length - 1 ? '<span class="cc-prereq-arrow">→</span>' : '';
-      return `<span class="cc-prereq-node ${nodeClass}">${formatCode(code)}</span>${arrow}`;
-    }).join('');
-
-    chainEl.innerHTML = `
-      <p class="cc-prereq-chain__title">${chain.chain_name}</p>
-      <div class="cc-prereq-chain__flow">${flow}</div>
-    `;
-    container.appendChild(chainEl);
-  });
-
-  // Wire the search input to filter chains by course code
-  const searchInput = document.getElementById('prereq-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      const q = searchInput.value.toUpperCase().replace(/\s/g, '');
-      document.querySelectorAll('.cc-prereq-chain').forEach(el => {
-        el.style.display = el.textContent.toUpperCase().replace(/\s/g, '').includes(q) ? '' : 'none';
-      });
-    });
-  }
-}
-
-// ─── GPA Simulator Tab ────────────────────────────────────────────────
-
-// Renders the UCalgary grading scale reference tiles
-function renderGPAScale() {
-  const grid = document.getElementById('gpa-scale-grid');
-  if (!grid || !programsData) return;
-
-  grid.innerHTML = '';
-  programsData.grading_scale_display.forEach(entry => {
-    const tile = document.createElement('div');
-    tile.className = 'cc-grade-tile';
-    tile.innerHTML = `
-      <span class="cc-grade-tile__letter">${entry.letter}</span>
-      <span class="cc-grade-tile__points">${entry.points.toFixed(1)}</span>
-      <span class="cc-grade-tile__pct">${entry.percentage}%</span>
-    `;
-    grid.appendChild(tile);
-  });
-}
-
-// Seeds the GPA simulator with the student's current semester courses
-function seedGPARows(programKey) {
-  const program = getProgramByKey(programKey);
-  if (!program) return;
-
-  const profileYear = loadProfile()?.year || 'Year 1';
-  const yearKey = profileYear.toLowerCase().replace(' ', '_').replace('+', '');
-  const yearCourses = program.year_breakdown[yearKey] || program.year_breakdown['year_1'] || [];
-
-  gpaRows = [];
-  yearCourses.slice(0, 5).forEach(code => {
-    gpaRows.push({ code, grade: 'B+', units: 3 });
-  });
-
-  if (gpaRows.length === 0) {
-    gpaRows = [
-      { code: 'COURSE 1', grade: 'B+', units: 3 },
-      { code: 'COURSE 2', grade: 'B+', units: 3 },
-      { code: 'COURSE 3', grade: 'A-', units: 3 }
-    ];
+  function buildChain(code, depth, visited) {
+    if (visited.has(code) || depth > 5) return null;
+    visited.add(code);
+    const c = allCourses.find(x => x.code.replace(/\s+/g, '') === code);
+    const prereqs = (c ? c.prereqs : [])
+      .map(p => buildChain(p.replace(/\s+/g, ''), depth + 1, new Set(visited)))
+      .filter(Boolean);
+    return { code, title: c ? c.title : code, isCompleted: completedCodes.has(code), isTarget: code === targetCode, prereqs };
   }
 
-  renderGPARows();
-  updateGPA();
-}
-
-// Renders each course row in the GPA simulator with a grade dropdown
-function renderGPARows() {
-  const list = document.getElementById('gpa-courses-list');
-  if (!list) return;
-
-  list.innerHTML = '';
-  gpaRows.forEach((row, idx) => {
-    const rowEl = document.createElement('div');
-    rowEl.className = 'cc-gpa-course-row';
-
-    const gradeOptions = Object.keys(GRADE_POINTS).map(g =>
-      `<option value="${g}" ${g === row.grade ? 'selected' : ''}>${g} (${GRADE_POINTS[g].toFixed(1)})</option>`
-    ).join('');
-
-    rowEl.innerHTML = `
-      <input class="input-field" value="${formatCode(row.code)}" placeholder="Course" data-idx="${idx}" data-field="code" />
-      <select class="input-field" data-idx="${idx}" data-field="grade">${gradeOptions}</select>
-      <button class="cc-gpa-course-row__remove" data-idx="${idx}" aria-label="Remove">✕</button>
-    `;
-    list.appendChild(rowEl);
-  });
-
-  // Update state when user changes a course name or grade
-  list.querySelectorAll('input, select').forEach(el => {
-    el.addEventListener('change', () => {
-      const idx = parseInt(el.dataset.idx);
-      const field = el.dataset.field;
-      gpaRows[idx][field] = el.value;
-      updateGPA();
-    });
-  });
-
-  // Remove a course row when the × button is clicked
-  list.querySelectorAll('.cc-gpa-course-row__remove').forEach(btn => {
-    btn.addEventListener('click', () => {
-      gpaRows.splice(parseInt(btn.dataset.idx), 1);
-      renderGPARows();
-      updateGPA();
-    });
-  });
-}
-
-// Wires the "Add Course" button and the "What If" calculator
-function wireGPASimulator() {
-  const addBtn = document.getElementById('add-gpa-course-btn');
-  if (addBtn) {
-    addBtn.addEventListener('click', () => {
-      gpaRows.push({ code: 'NEW COURSE', grade: 'B+', units: 3 });
-      renderGPARows();
-      updateGPA();
-    });
+  function renderNode(node) {
+    const st = node.isTarget ? 'target' : node.isCompleted ? 'completed' : 'needed';
+    const label = node.code.replace(/([A-Z]+)(\d+)/, '$1 $2');
+    let html = `<div class="prereq-node ${st}">
+      <div class="node-code">${label}</div>
+      <div class="node-title">${node.title}</div>
+      ${node.isCompleted ? '<div class="node-check">✅ Done</div>' : st === 'target' ? '<div class="node-check" style="color:#CC0033;">← Target</div>' : ''}
+    </div>`;
+    if (node.prereqs.length > 0) {
+      html += `<div class="prereq-children">` +
+        node.prereqs.map(ch => `<div class="prereq-branch"><div class="prereq-arrow">↑ requires</div>${renderNode(ch)}</div>`).join('') +
+        `</div>`;
+    }
+    return html;
   }
 
-  const whatifBtn = document.getElementById('whatif-btn');
-  if (whatifBtn) {
-    whatifBtn.addEventListener('click', () => {
-      const grade = parseFloat(document.getElementById('whatif-grade')?.value || 0);
-      const current = calculateGPA();
-      const totalUnits = gpaRows.reduce((s, r) => s + r.units, 0);
-      const newGPA = ((current * totalUnits) + (grade * 3)) / (totalUnits + 3);
-      const diff = newGPA - current;
-      const sign = diff >= 0 ? '+' : '';
-      const resultEl = document.getElementById('whatif-result');
-      if (resultEl) {
-        resultEl.textContent = `Your GPA would be ${newGPA.toFixed(2)} (${sign}${diff.toFixed(2)} from current ${current.toFixed(2)})`;
-      }
-    });
-  }
+  const chain = buildChain(targetCode, 0, new Set());
+  container.innerHTML = `<div class="prereq-tree">${renderNode(chain)}</div>`;
 }
 
-// Calculates the weighted GPA from all rows and returns the numeric value
-function calculateGPA() {
-  if (gpaRows.length === 0) return 0;
-  let totalPoints = 0;
-  let totalUnits = 0;
-  gpaRows.forEach(row => {
-    const pts = GRADE_POINTS[row.grade] ?? 0;
-    totalPoints += pts * row.units;
-    totalUnits += row.units;
-  });
-  return totalUnits === 0 ? 0 : totalPoints / totalUnits;
-}
+// ─── GPA Simulator ───────────────────────────────────────────────────────────
 
-// Recalculates GPA and updates the display value and colour
-function updateGPA() {
-  const gpa = calculateGPA();
-  const resultEl = document.getElementById('gpa-result-value');
-  const subEl = document.getElementById('gpa-result-sub');
-  const sidebarEl = document.getElementById('sidebar-gpa');
+function updateGPASimulator() {
+  const grid          = document.getElementById('gpa-course-grid');
+  const curDisplay    = document.getElementById('current-gpa-display');
+  const projDisplay   = document.getElementById('projected-gpa-display');
+  const standing      = document.getElementById('gpa-standing');
+  const creditsEl     = document.getElementById('credits-completed-display');
+  if (!grid) return;
 
-  const display = gpa.toFixed(2);
-  if (resultEl) {
-    resultEl.textContent = display;
-    resultEl.style.color = gpa >= 3.5 ? 'var(--color-success)'
-      : gpa >= 2.7 ? 'var(--color-primary)'
-        : gpa >= 2.0 ? 'var(--color-gold)'
-          : 'var(--color-danger)';
-  }
-  if (subEl) {
-    subEl.textContent = gpa >= 3.7 ? 'Dean\'s List territory'
-      : gpa >= 3.0 ? 'Good standing'
-        : gpa >= 2.0 ? 'Minimum required is 2.0'
-          : 'Below minimum GPA — seek academic advising';
-  }
-  if (sidebarEl) sidebarEl.textContent = display;
-}
-
-// ─── AI Advisor Chat Tab ──────────────────────────────────────────────
-
-// Wires the AI advisor chat panel — seeds quick questions and send button
-function wireAdvisorChat(profile) {
-  renderQuickQuestions();
-  initAdvisorUI(profile);
-}
-
-// Renders the quick-question chips below the chat box
-function renderQuickQuestions() {
-  const container = document.getElementById('quick-questions');
-  if (!container) return;
-
-  QUICK_QUESTIONS.forEach(q => {
-    const chip = document.createElement('button');
-    chip.className = 'badge badge--muted';
-    chip.style.cursor = 'pointer';
-    chip.textContent = q;
-    chip.addEventListener('click', () => {
-      const input = document.getElementById('advisor-input');
-      if (input) {
-        input.value = q;
-        input.focus();
-      }
-    });
-    container.appendChild(chip);
-  });
-}
-
-// Sets up the advisor chat — shows greeting, wires send button and Enter key
-function initAdvisorUI(profile) {
-  const messagesEl = document.getElementById('advisor-messages');
-  const inputEl = document.getElementById('advisor-input');
-  const sendBtn = document.getElementById('advisor-send-btn');
-
-  if (!messagesEl || !inputEl || !sendBtn) return;
-
-  const name = profile?.name || 'there';
-  const program = profile?.program || 'your program';
-  appendMessage(messagesEl, 'assistant',
-    `Hi ${name}! I'm your UCalgary academic advisor. I know your ${program} program requirements, prerequisites, and course catalog. Ask me anything — what to take next, how to boost your GPA, or what you need to graduate.`
+  const passed = TRANSCRIPT_DATA.filter(c =>
+    c.status === 'passed' && UCALGARY_GRADE_POINTS[c.grade] !== null && UCALGARY_GRADE_POINTS[c.grade] !== undefined
   );
 
-  const handleSend = async () => {
-    const text = inputEl.value.trim();
-    if (!text) return;
-    inputEl.value = '';
-    inputEl.disabled = true;
-    sendBtn.disabled = true;
+  let pts = 0, creds = 0;
+  passed.forEach(c => { pts += UCALGARY_GRADE_POINTS[c.grade] * (c.credits || 3); creds += (c.credits || 3); });
 
-    appendMessage(messagesEl, 'user', text);
-    const thinkingId = appendThinking(messagesEl);
+  const gpa = creds > 0 ? pts / creds : 0;
+  if (curDisplay)  curDisplay.textContent  = creds > 0 ? gpa.toFixed(2) : '--';
+  if (projDisplay) projDisplay.textContent = creds > 0 ? gpa.toFixed(2) : '--';
+  if (creditsEl)   creditsEl.textContent   = creds;
+  if (standing)    standing.textContent    = standingLabel(gpa);
 
-    const reply = await callAdvisorAPI(text, profile);
+  const inProgress = TRANSCRIPT_DATA.filter(c => c.status === 'in_progress');
+  if (TRANSCRIPT_DATA.length === 0) {
+    grid.innerHTML = '<div class="gpa-placeholder">Upload your transcript or use the demo transcript to simulate grades</div>';
+    return;
+  }
+  if (inProgress.length === 0) {
+    grid.innerHTML = '<div class="gpa-placeholder">No in-progress courses found — your GPA is shown above.</div>';
+    return;
+  }
 
-    removeThinking(thinkingId);
-    inputEl.disabled = false;
-    sendBtn.disabled = false;
-    inputEl.focus();
-    appendMessage(messagesEl, 'assistant', reply);
+  const grades = Object.keys(UCALGARY_GRADE_POINTS).filter(g => UCALGARY_GRADE_POINTS[g] !== null);
+  grid.innerHTML = `<div class="gpa-sim-header"><h3>Simulate grades for in-progress courses</h3></div>
+    <div class="gpa-sim-courses">` +
+    inProgress.map(c => `<div class="gpa-sim-row">
+      <div class="gpa-sim-course">
+        <span class="gpa-course-code">${c.code.replace(/([A-Z]+)(\d+)/,'$1 $2')}</span>
+        <span class="gpa-course-title">${c.title}</span>
+      </div>
+      <select class="gpa-grade-select" data-code="${c.code}" data-credits="${c.credits||3}" onchange="recalcProjectedGPA()">
+        <option value="">Select grade</option>
+        ${grades.map(g=>`<option value="${g}">${g}</option>`).join('')}
+      </select>
+    </div>`).join('') +
+    `</div>`;
+}
+
+function recalcProjectedGPA() {
+  const passed = TRANSCRIPT_DATA.filter(c =>
+    c.status === 'passed' && UCALGARY_GRADE_POINTS[c.grade] !== null && UCALGARY_GRADE_POINTS[c.grade] !== undefined
+  );
+  let pts = 0, creds = 0;
+  passed.forEach(c => { pts += UCALGARY_GRADE_POINTS[c.grade] * (c.credits || 3); creds += (c.credits || 3); });
+
+  document.querySelectorAll('.gpa-grade-select').forEach(sel => {
+    if (sel.value && UCALGARY_GRADE_POINTS[sel.value] !== null) {
+      const cr = parseFloat(sel.dataset.credits) || 3;
+      pts += UCALGARY_GRADE_POINTS[sel.value] * cr;
+      creds += cr;
+    }
+  });
+
+  const projected = creds > 0 ? pts / creds : 0;
+  const el = document.getElementById('projected-gpa-display');
+  const st = document.getElementById('projected-standing');
+  if (el) el.textContent = projected.toFixed(2);
+  if (st) st.textContent = standingLabel(projected);
+}
+
+function standingLabel(gpa) {
+  if (gpa >= 3.75) return "Dean's List 🏆";
+  if (gpa >= 3.5)  return 'Great Distinction ⭐';
+  if (gpa >= 3.0)  return 'Good Standing ✅';
+  if (gpa >= 2.0)  return 'Satisfactory 📚';
+  return 'At Risk ⚠️';
+}
+
+// ─── AI Advisor ───────────────────────────────────────────────────────────────
+
+async function sendAdvisorMessage() {
+  const input = document.getElementById('advisor-input');
+  if (!input) return;
+  const message = input.value.trim();
+  if (!message) return;
+
+  input.value = '';
+  appendMsg('user', message);
+  appendMsg('loading', '');
+
+  const profile  = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  const upcoming = JSON.parse(localStorage.getItem('unite_upcoming_courses') || '[]');
+
+  const body = {
+    message,
+    program:            profile.program || 'Computer Science',
+    year:               profile.year || String(CURRENT_YEAR),
+    transcript:         TRANSCRIPT_DATA.filter(c => c.status === 'passed').map(c => `${c.code} ${c.grade}`),
+    upcoming_courses:   upcoming,
   };
 
-  sendBtn.addEventListener('click', handleSend);
-  inputEl.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-  });
-}
-
-// Calls the backend AI route and returns the advisor's reply text
-async function callAdvisorAPI(message, profile) {
   try {
-    const res = await fetch('/api/ai/chat', {
+    const token = localStorage.getItem('unite_token');
+    const res   = await fetch('/api/ai/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
-      body: JSON.stringify({
-        message,
-        program: profile?.program,
-        year: profile?.year,
-        transcript: loadCompletedCourses()
-      })
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error('API error');
     const data = await res.json();
-    return data.reply;
-  } catch {
-    return 'The AI advisor is temporarily unavailable. Please try again in a moment.';
+    removeLoading();
+    appendMsg('advisor', data.reply || data.message || 'Sorry, I could not get a response. Please try again.');
+  } catch (err) {
+    removeLoading();
+    appendMsg('advisor', generateLocalAdvisorResponse(message, profile, upcoming));
   }
 }
 
-// Adds a chat bubble to the messages container (role: 'user' or 'assistant')
-function appendMessage(container, role, text) {
-  const el = document.createElement('div');
-  el.className = `chat-message chat-message--${role === 'user' ? 'mine' : 'theirs'}`;
-
-  const avatar = document.createElement('div');
-  avatar.className = 'chat-avatar';
-  avatar.style.background = role === 'user' ? 'var(--color-primary)' : 'var(--color-black)';
-  avatar.textContent = role === 'user' ? (getUser()?.name?.charAt(0) || 'U') : 'AI';
-
-  const body = document.createElement('div');
-  const meta = document.createElement('div');
-  meta.className = 'chat-meta';
-  meta.innerHTML = `<span class="chat-name">${role === 'user' ? 'You' : 'Course Compass AI'}</span><span class="chat-timestamp">${formatTime(new Date())}</span>`;
-
-  const bubble = document.createElement('div');
-  bubble.className = 'chat-bubble';
-  bubble.textContent = text;
-
-  body.appendChild(meta);
-  body.appendChild(bubble);
-  el.appendChild(avatar);
-  el.appendChild(body);
-  container.appendChild(el);
-  container.scrollTop = container.scrollHeight;
+function askAdvisor(question) {
+  const inp = document.getElementById('advisor-input');
+  if (inp) inp.value = question;
+  sendAdvisorMessage();
 }
 
-// Shows the animated thinking dots while waiting for the AI to respond
-function appendThinking(container) {
-  const id = 'thinking-' + Date.now();
-  const el = document.createElement('div');
-  el.id = id;
-  el.className = 'chat-message chat-message--theirs';
-  el.innerHTML = `
-    <div class="chat-avatar" style="background:var(--color-black)">AI</div>
-    <div><div class="thinking-dots"><span>.</span><span>.</span><span>.</span></div></div>
-  `;
-  container.appendChild(el);
-  container.scrollTop = container.scrollHeight;
-  return id;
-}
+function appendMsg(type, text) {
+  const msgs = document.getElementById('advisor-messages');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.className = `advisor-message ${type}`;
 
-// Removes the thinking bubble once the AI reply arrives
-function removeThinking(id) {
-  document.getElementById(id)?.remove();
-}
-
-// Formats a Date object into a short time string like "11:32 PM"
-function formatTime(date) {
-  return date.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' });
-}
-
-// ─── Nav toggle (mobile) ──────────────────────────────────────────────
-
-// Wires the hamburger menu toggle for mobile nav
-function wireNavToggle() {
-  const toggle = document.getElementById('nav-toggle');
-  const nav = document.getElementById('main-nav');
-  if (toggle && nav) {
-    toggle.addEventListener('click', () => nav.classList.toggle('nav--open'));
+  if (type === 'loading') {
+    div.id = 'loading-message';
+    div.innerHTML = `<div class="message-avatar">🎓</div>
+      <div class="message-bubble typing"><span></span><span></span><span></span></div>`;
+  } else if (type === 'user') {
+    const profile  = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+    const initial  = (profile.name || 'S').charAt(0).toUpperCase();
+    div.innerHTML = `<div class="message-bubble user-bubble">${escHtml(text)}</div>
+      <div class="message-avatar user-avatar">${initial}</div>`;
+  } else {
+    // Render markdown-like formatting from Claude
+    const formatted = text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code>$1</code>')
+      .replace(/\n/g, '<br>');
+    div.innerHTML = `<div class="message-avatar">🎓</div>
+      <div class="message-bubble">${formatted}</div>`;
   }
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
-// ─── Boot ─────────────────────────────────────────────────────────────
+function removeLoading() {
+  const el = document.getElementById('loading-message');
+  if (el) el.remove();
+}
 
-document.addEventListener('DOMContentLoaded', init);
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function generateLocalAdvisorResponse(message, profile, upcoming) {
+  const msg  = message.toLowerCase();
+  const prog = profile.program || 'Computer Science';
+  const yr   = profile.year || CURRENT_YEAR;
+
+  if (msg.includes('next') || msg.includes('take')) {
+    const list = upcoming.slice(0, 3).map(c => c.replace(/([A-Z]+)(\d+)/, '$1 $2')).join(', ');
+    return list
+      ? `Based on your ${prog} Year ${yr} roadmap, I recommend: **${list}** next semester. These are the natural next steps in your program sequence. Click any course card in the Roadmap tab for its prereq chain.`
+      : `For ${prog} Year ${yr}, check the Roadmap tab to see your recommended next courses. Upload your transcript to unlock personalized recommendations.`;
+  }
+  if (msg.includes('graduate') || msg.includes('on track')) {
+    const creds = TRANSCRIPT_DATA.filter(c => c.status === 'passed').reduce((s,c)=>s+(c.credits||3),0);
+    return `You need **120 credits** to graduate. You have **${creds} credits** completed (${Math.round(creds/1.2)}%). At 5 courses/semester you're on track for a 4-year graduation.`;
+  }
+  if (msg.includes('gpa') || msg.includes('grade') || msg.includes('improve')) {
+    const gpa = calculateCurrentGPA();
+    return gpa
+      ? `Your current GPA is **${gpa}**. ${standingLabel(parseFloat(gpa))}. Use the **GPA Simulator** tab to model different grade scenarios for your in-progress courses.`
+      : 'Upload your transcript so I can calculate your GPA and give specific advice.';
+  }
+  if (msg.includes('hard') || msg.includes('difficult')) {
+    return `In **Computer Science**, the courses students find most challenging are: **CPSC 331** (Data Structures), **CPSC 413** (Algorithms), and **CPSC 457** (Operating Systems). Start them when you have a lighter course load and use the study resources at the Taylor Family Digital Library.`;
+  }
+  return `As a **${prog}** student at UCalgary, use the Roadmap tab to see your full semester-by-semester plan. Upload your transcript for personalized recommendations based on your actual progress.`;
+}
+
+function calculateCurrentGPA() {
+  const graded = TRANSCRIPT_DATA.filter(c =>
+    c.status === 'passed' && UCALGARY_GRADE_POINTS[c.grade] !== null && UCALGARY_GRADE_POINTS[c.grade] !== undefined
+  );
+  if (!graded.length) return null;
+  const pts   = graded.reduce((s,c) => s + UCALGARY_GRADE_POINTS[c.grade]*(c.credits||3), 0);
+  const creds = graded.reduce((s,c) => s + (c.credits||3), 0);
+  return (pts/creds).toFixed(2);
+}

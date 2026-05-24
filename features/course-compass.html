@@ -12,209 +12,167 @@
 <body>
 
   <!-- Navigation -->
-  <header>
-    <nav class="nav" id="main-nav">
-      <div class="nav__brand">
-        <a href="/index.html">
-          <img src="/css/logo.svg" alt="UNite" height="28" />
-        </a>
+  <script src="/js/unite-nav.js"></script>
+  <script>injectNav('compass');</script>
+
+  <main class="compass-main">
+
+    <!-- PAGE HEADER -->
+    <div class="compass-header">
+      <div class="container">
+        <span class="section-label">COURSE COMPASS</span>
+        <h1 class="compass-title">Your Degree, Mapped.</h1>
+        <p class="compass-subtitle">Upload your UCalgary transcript and get a personalized semester-by-semester roadmap.</p>
       </div>
-      <ul class="nav__links" id="nav-links">
-        <li><a href="/features/course-compass.html" class="nav__link nav__link--active">Course Compass</a></li>
-        <li><a href="/features/marketplace.html" class="nav__link">Marketplace</a></li>
-        <li><a href="/features/community.html" class="nav__link">Community</a></li>
-        <li><a href="/index.html" class="nav__link">Home</a></li>
-      </ul>
-      <button class="nav__toggle" id="nav-toggle" aria-label="Toggle menu">
-        <span></span><span></span><span></span>
-      </button>
-    </nav>
-  </header>
+    </div>
 
-  <main class="cc-layout">
-
-    <!-- Sidebar: Student Profile -->
-    <aside class="cc-sidebar">
-      <div class="cc-profile card card--flat">
-        <div class="cc-profile__avatar" id="profile-avatar">S</div>
-        <div class="cc-profile__info">
-          <p class="cc-profile__name" id="profile-name">Loading…</p>
-          <span class="tag" id="profile-program-tag">Program</span>
-          <span class="tag tag--muted" id="profile-year-tag">Year</span>
-        </div>
-      </div>
-
-      <div class="cc-gpa-card card card--flat">
-        <p class="cc-gpa-card__label">Current GPA</p>
-        <p class="cc-gpa-card__value" id="sidebar-gpa">—</p>
-        <p class="cc-gpa-card__sub text-muted">UCalgary 4.0 scale</p>
-      </div>
-
-      <div class="cc-credits-card card card--flat">
-        <p class="cc-credits-card__label">Credits Completed</p>
-        <div class="cc-credits-bar">
-          <div class="cc-credits-bar__fill" id="credits-bar" style="width: 0%"></div>
-        </div>
-        <p class="cc-credits-card__sub text-muted"><span id="credits-done">0</span> / 120 credits</p>
-      </div>
-
-      <nav class="cc-tabs" id="cc-tabs">
-        <button class="cc-tab cc-tab--active" data-tab="roadmap">📅 Roadmap</button>
-        <button class="cc-tab" data-tab="prereqs">🔗 Prereq Tree</button>
-        <button class="cc-tab" data-tab="gpa">📊 GPA Simulator</button>
-        <button class="cc-tab" data-tab="advisor">🤖 AI Advisor</button>
-      </nav>
-    </aside>
-
-    <!-- Main Panel -->
-    <section class="cc-main">
-
-      <!-- Setup Banner (shown when no program set) -->
-      <div class="cc-setup-banner" id="setup-banner">
-        <div class="card">
-          <h2 class="card__title text-display">Set Up Your Degree Plan</h2>
-          <p class="card__body">Select your program to generate your personalized semester roadmap, prerequisite map, and GPA tracker.</p>
-          <div class="cc-setup-form">
-            <div class="input-group">
-              <label class="input-label" for="program-select">Your Program</label>
-              <select class="input-field" id="program-select">
-                <option value="">— Select your program —</option>
-                <option value="cs">B.Sc. Computer Science</option>
-                <option value="seng">B.Sc. Software Engineering</option>
-                <option value="business">B.Comm. Business (Haskayne)</option>
-                <option value="kinesiology">B.Sc. Kinesiology</option>
-                <option value="psychology">B.Sc. Psychology</option>
-              </select>
+    <!-- TRANSCRIPT UPLOAD SECTION -->
+    <div class="transcript-section" id="transcript-zone">
+      <div class="container">
+        <div class="transcript-card" id="transcript-upload-card">
+          <div class="transcript-upload-area" id="upload-drop-zone">
+            <div class="upload-icon">📄</div>
+            <h3>Upload Your UCalgary Transcript</h3>
+            <p>Drag and drop your transcript PDF here, or click to browse</p>
+            <p class="upload-hint">Your transcript is processed locally — never stored on our servers</p>
+            <input type="file" id="transcript-file" accept=".pdf,.txt" hidden>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
+              <button class="btn btn-primary" onclick="document.getElementById('transcript-file').click()">Choose Transcript</button>
+              <button class="btn btn-secondary" onclick="loadDemoTranscript()">⚡ Use Demo Transcript</button>
             </div>
-            <div class="input-group">
-              <label class="input-label" for="year-select">Your Year</label>
-              <select class="input-field" id="year-select">
-                <option value="Year 1">Year 1</option>
-                <option value="Year 2">Year 2</option>
-                <option value="Year 3">Year 3</option>
-                <option value="Year 4">Year 4</option>
-                <option value="Year 5+">Year 5+</option>
-              </select>
+          </div>
+          <div class="transcript-loaded" id="transcript-loaded" style="display:none;">
+            <div class="transcript-info">
+              <span class="transcript-check">✅</span>
+              <div style="flex:1;">
+                <strong id="transcript-student-name">Loading...</strong>
+                <p id="transcript-summary" style="margin:0;color:#6b7280;font-size:14px;"></p>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="clearTranscript()">Clear</button>
             </div>
-            <div class="input-group">
-              <label class="input-label">Completed Courses (one per line)</label>
-              <textarea class="input-field" id="transcript-input" placeholder="CPSC 217&#10;MATH 211&#10;CPSC 231" rows="6"></textarea>
-              <p class="text-muted" style="font-size:0.8125rem;margin-top:0.25rem;">Enter course codes you've completed, e.g. CPSC 217</p>
-            </div>
-            <button class="btn-primary btn-block" id="generate-roadmap-btn">Generate My Roadmap</button>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Tab: Roadmap -->
-      <div class="cc-panel" id="panel-roadmap">
-        <div class="cc-panel__header">
-          <h2 class="text-display" style="font-size:1.75rem;">Your Degree Roadmap</h2>
-          <button class="btn-secondary btn-sm" id="regenerate-btn">↺ Regenerate</button>
-        </div>
-
-        <div id="roadmap-loading" class="cc-loading" style="display:none;">
-          <div class="cc-loading__spinner"></div>
-          <p>Generating your personalized roadmap with AI…</p>
-        </div>
-
-        <div id="roadmap-content" class="cc-roadmap"></div>
-
-        <div class="cc-next-courses card card--flat" id="next-courses-card" style="display:none;">
-          <h3 class="cc-next-courses__title">📚 Courses You Need Next</h3>
-          <p class="cc-next-courses__sub text-muted">These will also appear in Marketplace so you can find textbooks.</p>
-          <div class="cluster" id="next-courses-chips"></div>
+    <!-- TABS -->
+    <div class="compass-tabs-wrapper">
+      <div class="container">
+        <div class="compass-tabs" role="tablist">
+          <button class="tab-btn active" data-tab="roadmap" onclick="switchTab('roadmap')">🗺️ Roadmap</button>
+          <button class="tab-btn" data-tab="prereqs" onclick="switchTab('prereqs')">🔗 Prereq Tree</button>
+          <button class="tab-btn" data-tab="gpa" onclick="switchTab('gpa')">📊 GPA Simulator</button>
+          <button class="tab-btn" data-tab="advisor" onclick="switchTab('advisor')">🤖 AI Advisor</button>
         </div>
       </div>
+    </div>
 
-      <!-- Tab: Prereq Tree -->
-      <div class="cc-panel" id="panel-prereqs" style="display:none;">
-        <div class="cc-panel__header">
-          <h2 class="text-display" style="font-size:1.75rem;">Prerequisite Map</h2>
-        </div>
-        <div class="cc-prereq-search input-group">
-          <input class="input-field" id="prereq-search" type="text" placeholder="Search a course code, e.g. CPSC 331…" />
-        </div>
-        <div id="prereq-tree-container" class="cc-prereq-tree"></div>
-      </div>
+    <!-- TAB CONTENT -->
+    <div class="container compass-content">
 
-      <!-- Tab: GPA Simulator -->
-      <div class="cc-panel" id="panel-gpa" style="display:none;">
-        <div class="cc-panel__header">
-          <h2 class="text-display" style="font-size:1.75rem;">GPA Simulator</h2>
-          <p class="text-muted">UCalgary 4.0 grading scale</p>
-        </div>
-
-        <div class="cc-gpa-scale card card--flat">
-          <h3 style="font-size:0.9375rem;font-weight:600;margin-bottom:0.75rem;">UCalgary Grading Scale</h3>
-          <div class="cc-gpa-scale__grid" id="gpa-scale-grid"></div>
-        </div>
-
-        <div class="cc-gpa-simulator card">
-          <h3 style="font-size:1rem;font-weight:600;margin-bottom:1rem;">Add Courses to Simulate</h3>
-          <div id="gpa-courses-list" class="stack"></div>
-          <button class="btn-secondary btn-sm" id="add-gpa-course-btn" style="margin-top:0.75rem;">+ Add Course</button>
-
-          <div class="cc-gpa-result" id="gpa-result">
-            <div class="cc-gpa-result__value" id="gpa-result-value">—</div>
-            <div class="cc-gpa-result__label">Simulated GPA</div>
-            <div class="cc-gpa-result__sub text-muted" id="gpa-result-sub"></div>
-          </div>
-        </div>
-
-        <div class="cc-whatif card card--flat">
-          <h3 style="font-size:0.9375rem;font-weight:600;margin-bottom:0.5rem;">What If I get…</h3>
-          <p class="text-muted" style="font-size:0.875rem;margin-bottom:1rem;">See what one grade does to your overall GPA.</p>
-          <div class="cluster">
-            <select class="input-field" id="whatif-grade" style="width:auto;flex:none;">
-              <option value="4.0">A (4.0)</option>
-              <option value="3.7">A- (3.7)</option>
-              <option value="3.3">B+ (3.3)</option>
-              <option value="3.0">B (3.0)</option>
-              <option value="2.7">B- (2.7)</option>
-              <option value="2.3">C+ (2.3)</option>
-              <option value="2.0">C (2.0)</option>
-              <option value="1.7">C- (1.7)</option>
-              <option value="1.3">D+ (1.3)</option>
-              <option value="1.0">D (1.0)</option>
-              <option value="0.0">F (0.0)</option>
+      <!-- ROADMAP TAB -->
+      <div class="tab-panel active" id="tab-roadmap">
+        <div class="roadmap-controls">
+          <div>
+            <label>Program</label>
+            <select id="program-select" onchange="loadRoadmap()">
+              <option value="computer_science">Computer Science</option>
+              <option value="software_engineering">Software Engineering</option>
+              <option value="business">Business (Haskayne)</option>
+              <option value="kinesiology">Kinesiology</option>
+              <option value="psychology">Psychology</option>
             </select>
-            <span class="text-muted" style="font-size:0.875rem;">in a 3-credit course</span>
-            <button class="btn-primary btn-sm" id="whatif-btn">Calculate</button>
           </div>
-          <p class="cc-whatif__result" id="whatif-result"></p>
+          <div>
+            <label>Current Year</label>
+            <select id="year-select" onchange="loadRoadmap()">
+              <option value="1">Year 1</option>
+              <option value="2">Year 2</option>
+              <option value="3">Year 3</option>
+              <option value="4">Year 4</option>
+            </select>
+          </div>
+          <div class="roadmap-legend">
+            <span class="legend-dot completed"></span>Completed
+            <span class="legend-dot current"></span>In Progress
+            <span class="legend-dot upcoming"></span>Upcoming
+            <span class="legend-dot locked"></span>Prereq needed
+          </div>
+        </div>
+        <div id="roadmap-grid" class="roadmap-grid">
+          <div class="roadmap-loading">Loading your roadmap…</div>
+        </div>
+        <div class="graduation-progress" id="graduation-progress"></div>
+      </div>
+
+      <!-- PREREQ TREE TAB -->
+      <div class="tab-panel" id="tab-prereqs" style="display:none;">
+        <div class="prereq-controls">
+          <input type="text" id="prereq-search" placeholder="Search course e.g. CPSC331"
+                 class="input" oninput="searchPrereqs(this.value)" style="max-width:320px;">
+        </div>
+        <div id="prereq-tree-container" class="prereq-tree-container">
+          <div class="prereq-placeholder">
+            <p>Search for a course above to see its prerequisite chain</p>
+            <p style="margin-top:8px;font-size:13px;">Or click any course card in the Roadmap tab</p>
+          </div>
         </div>
       </div>
 
-      <!-- Tab: AI Advisor -->
-      <div class="cc-panel" id="panel-advisor" style="display:none;">
-        <div class="cc-panel__header">
-          <h2 class="text-display" style="font-size:1.75rem;">AI Academic Advisor</h2>
-          <span class="badge badge--gold">Powered by Claude</span>
-        </div>
-        <p class="text-muted" style="margin-bottom:1.25rem;">Ask anything about your degree, course choices, or prerequisites. I know UCalgary's full course catalog.</p>
-
-        <div class="chat-panel cc-advisor-chat">
-          <div class="chat-messages" id="advisor-messages"></div>
-          <div class="chat-input-bar">
-            <textarea class="input-field" id="advisor-input" placeholder="e.g. What should I take after CPSC 231?" rows="1"></textarea>
-            <button class="chat-send-btn" id="advisor-send-btn" aria-label="Send">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-              </svg>
-            </button>
+      <!-- GPA SIMULATOR TAB -->
+      <div class="tab-panel" id="tab-gpa" style="display:none;">
+        <div class="gpa-dashboard">
+          <div class="gpa-current-card">
+            <div class="gpa-number" id="current-gpa-display">--</div>
+            <div class="gpa-label">Current GPA</div>
+            <div class="gpa-standing" id="gpa-standing">Upload transcript to calculate</div>
+          </div>
+          <div class="gpa-projected-card">
+            <div class="gpa-number projected" id="projected-gpa-display">--</div>
+            <div class="gpa-label">Projected GPA</div>
+            <div class="gpa-standing" id="projected-standing">Adjust grades below</div>
+          </div>
+          <div class="gpa-progress-card">
+            <div class="gpa-number" id="credits-completed-display" style="color:#0a0a0a;">0</div>
+            <div class="gpa-label">Credits Earned</div>
+            <div class="gpa-standing" id="credits-standing">of 120 required</div>
           </div>
         </div>
-
-        <div class="cc-quick-questions">
-          <p class="text-muted" style="font-size:0.8125rem;margin-bottom:0.5rem;">Quick questions:</p>
-          <div class="cluster" id="quick-questions"></div>
+        <div class="gpa-simulator-grid" id="gpa-course-grid">
+          <div class="gpa-placeholder">Upload your transcript or click "Use Demo Transcript" to simulate grades</div>
         </div>
       </div>
 
-    </section>
+      <!-- AI ADVISOR TAB -->
+      <div class="tab-panel" id="tab-advisor" style="display:none;">
+        <div class="advisor-container">
+          <div class="advisor-suggestions" id="advisor-suggestions">
+            <span class="suggestions-label">Quick questions:</span>
+            <button class="suggestion-chip" onclick="askAdvisor('What courses should I take next semester?')">What should I take next?</button>
+            <button class="suggestion-chip" onclick="askAdvisor('Am I on track to graduate on time?')">Am I on track to graduate?</button>
+            <button class="suggestion-chip" onclick="askAdvisor('What are the hardest CPSC courses I should watch out for?')">Hardest courses?</button>
+            <button class="suggestion-chip" onclick="askAdvisor('How can I improve my GPA this semester?')">How to improve GPA?</button>
+          </div>
+          <div class="advisor-messages" id="advisor-messages">
+            <div class="advisor-message system">
+              <div class="message-avatar">🎓</div>
+              <div class="message-bubble">
+                Hi! I'm your UCalgary academic advisor. Upload your transcript and I'll give you personalized course recommendations based on your actual progress. Or ask me anything about your program!
+              </div>
+            </div>
+          </div>
+          <div class="advisor-input-bar">
+            <input type="text" id="advisor-input" class="input"
+                   placeholder="Ask about your degree, courses, or graduation requirements…"
+                   onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdvisorMessage();}">
+            <button class="btn btn-primary" onclick="sendAdvisorMessage()">Send →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </main>
 
-  <script type="module" src="/js/course-compass.js"></script>
+  <script src="/js/course-compass.js"></script>
 </body>
 </html>
