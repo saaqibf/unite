@@ -8,6 +8,7 @@ const express = require('express');
 const cors = require('cors');
 const db = require('./db');
 const marketplaceRoutes = require('./routes/marketplace');
+const chatRoutes = require('./routes/chat');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,6 +19,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.static(root));
 
 app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'unite' });

@@ -7,6 +7,11 @@
   <link rel="icon" type="image/svg+xml" href="/css/favicon.svg">
   <link rel="stylesheet" href="/css/unite-design-system.css">
   <link rel="stylesheet" href="/css/community.css">
+  <script>
+    window.PUSHER_KEY = '';
+    window.PUSHER_CLUSTER = 'mt1';
+  </script>
+  <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
 </head>
 <body class="community-page">
   <nav class="nav">
@@ -151,11 +156,10 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
   <script>
     window.UNITE_CHAT_CONFIG = {
-      pusherKey: '',
-      pusherCluster: 'mt1',
+      pusherKey: window.PUSHER_KEY || '',
+      pusherCluster: window.PUSHER_CLUSTER || 'mt1',
       onlineCount: 12,
       currentUser: { name: 'Primel J.', program: 'CS · Y2' },
       seedMessages: [

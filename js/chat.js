@@ -117,36 +117,65 @@ async function sendMessage(text, currentUser) {
   const trimmed = (text || '').trim();
   if (!trimmed) return;
 
+  const payload = {
+    text: trimmed,
+    user: currentUser.name,
+    program: currentUser.program
+  };
+
   try {
     const res = await fetch('/api/chat/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: trimmed })
+      body: JSON.stringify(payload)
     });
 
     if (!res.ok) {
-      renderMessage({
-        user: currentUser.name,
-        program: currentUser.program,
-        text: trimmed,
-        timestamp: new Date().toISOString()
-      }, currentUser);
+      renderMessage(
+        Object.assign({}, payload, { timestamp: new Date().toISOString() }),
+        currentUser
+      );
     }
   } catch {
-    renderMessage({
-      user: currentUser.name,
-      program: currentUser.program,
-      text: trimmed,
-      timestamp: new Date().toISOString()
-    }, currentUser);
+    renderMessage(
+      Object.assign({}, payload, { timestamp: new Date().toISOString() }),
+      currentUser
+    );
   }
+}
+
+/**
+ * Loads Pusher public config from the backend when keys are not inlined.
+ */
+async function loadPusherConfig(config) {
+  if (config.pusherKey || window.PUSHER_KEY) {
+    return {
+      pusherKey: config.pusherKey || window.PUSHER_KEY,
+      pusherCluster: config.pusherCluster || window.PUSHER_CLUSTER || 'mt1'
+    };
+  }
+  try {
+    const res = await fetch('/api/chat/config');
+    if (res.ok) {
+      const data = await res.json();
+      window.PUSHER_KEY = data.key || '';
+      window.PUSHER_CLUSTER = data.cluster || 'mt1';
+      return { pusherKey: data.key, pusherCluster: data.cluster || 'mt1' };
+    }
+  } catch {
+    /* seed-only mode */
+  }
+  return { pusherKey: '', pusherCluster: config.pusherCluster || 'mt1' };
 }
 
 /**
  * Initializes Pusher real-time chat and wires up the send form.
  */
-function initChat(config) {
-  const { pusherKey, pusherCluster, currentUser, onlineCount } = config;
+async function initChat(config) {
+  const pusherCfg = await loadPusherConfig(config);
+  const pusherKey = pusherCfg.pusherKey;
+  const pusherCluster = pusherCfg.pusherCluster;
+  const { currentUser, onlineCount } = config;
   const messagesEl = document.getElementById('chat-messages');
   const form = document.getElementById('chat-form');
   const input = document.getElementById('chat-input');
