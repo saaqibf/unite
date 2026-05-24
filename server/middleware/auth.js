@@ -1,11 +1,16 @@
 const jwt = require('jsonwebtoken');
 
-// JWT auth — blocks any request without a valid token
+// Builds a demo user object for when DB is unavailable
+function demoUser(email) {
+  return { id: null, email: email || 'demo@ucalgary.ca', name: 'UNite Student', program: 'UCalgary' };
+}
+
+// JWT auth — accepts real JWTs, demo-* tokens, and x-unite-user-id headers
 function auth(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  // Marketplace fallback — allow x-unite-user-id header for demo/guest access
+  // No token at all — try header-based guest access (Pair B marketplace pattern)
   if (!token) {
     const guestId = req.headers['x-unite-user-id'];
     if (guestId) {
@@ -17,6 +22,12 @@ function auth(req, res, next) {
       return next();
     }
     return res.status(401).json({ error: 'Access denied. Please log in.' });
+  }
+
+  // Demo token issued when DB is unavailable — allow through with a placeholder user
+  if (token.startsWith('demo-')) {
+    req.user = demoUser();
+    return next();
   }
 
   try {
@@ -33,7 +44,10 @@ function optionalAuth(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   if (token) {
-    try { req.user = jwt.verify(token, process.env.JWT_SECRET); } catch { req.user = null; }
+    if (token.startsWith('demo-')) { req.user = demoUser(); }
+    else {
+      try { req.user = jwt.verify(token, process.env.JWT_SECRET); } catch { req.user = null; }
+    }
   }
   next();
 }

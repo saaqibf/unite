@@ -154,7 +154,7 @@ function getSeedListings() {
 db.seedMemoryIfEmpty(getSeedListings);
 configureCloudinary();
 
-router.get('/listings', auth, async (req, res) => {
+router.get('/listings', async (req, res) => {
   try {
     const all = await db.getAllListings();
     const listings = filterListings(all, req.query);
