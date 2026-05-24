@@ -60,8 +60,10 @@ function updateNavForLoggedInUser() {
 
   const firstName = profile.name || user.first_name || 'Student';
   const program = profile.program || '';
-  const year = profile.year ? `Year ${profile.year}` : '';
-  const avatarLetter = (user.initials || firstName.charAt(0) || 'S').toUpperCase();
+  // profile.year is already stored as "Year 3" / "Year 1" etc — don't prepend "Year" again
+  const rawYear = profile.year || '';
+  const year = rawYear.startsWith('Year') ? rawYear : (rawYear ? `Year ${rawYear}` : '');
+  const avatarLetter = (user.initials ? user.initials.charAt(0) : firstName.charAt(0) || 'S').toUpperCase();
 
   // Hide Sign In link and Join button
   const signinLink = document.getElementById('nav-signin-link');
@@ -73,11 +75,11 @@ function updateNavForLoggedInUser() {
   if (!navRight) return;
 
   navRight.innerHTML = `
-    <div class="profile-menu-wrapper" id="profile-menu-wrapper">
-      <button class="profile-trigger" onclick="toggleProfileMenu(event)">
-        <div class="profile-avatar-small">${avatarLetter}</div>
-        <span class="profile-name">${firstName}</span>
-        <span class="profile-chevron">▾</span>
+    <div class="profile-menu-wrapper" id="profile-menu-wrapper" style="position:relative;">
+      <button class="profile-trigger" onclick="toggleProfileMenu(event)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:999px;padding:6px 14px 6px 6px;cursor:pointer;color:white;font-family:inherit;font-size:14px;font-weight:600;line-height:1;">
+        <div class="profile-avatar-small" style="width:28px;height:28px;border-radius:50%;background:#CC0033;color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${avatarLetter}</div>
+        <span>${firstName}</span>
+        <span style="font-size:10px;opacity:0.7;margin-left:2px;">▾</span>
       </button>
       <div class="profile-dropdown" id="profile-dropdown" style="display:none;">
         <div class="profile-dropdown-header">

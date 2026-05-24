@@ -157,7 +157,10 @@
       var lastName  = user.last_name || '';
       var chatName  = lastName ? firstName + ' ' + lastName.charAt(0) + '.' : firstName;
       var prog = profile.program || 'UCalgary';
-      var yr   = profile.year ? ' · Y' + profile.year : '';
+      // year may already be "Year 3" — strip "Year " prefix for the short badge
+      var rawYr = profile.year || '';
+      var shortYr = rawYr.startsWith('Year ') ? rawYr.replace('Year ', 'Y') : (rawYr ? 'Y' + rawYr : '');
+      var yr = shortYr ? ' · ' + shortYr : '';
       window.UNITE_CHAT_CONFIG = {
         pusherKey: window.PUSHER_KEY || '',
         pusherCluster: window.PUSHER_CLUSTER || 'mt1',
