@@ -178,7 +178,39 @@ function getSeedSportsEvents() {
       skillLevel: 'Any',
       activityType: 'Soccer',
       attendees: ['Alex M.', 'Jordan L.', 'Taylor R.', 'Primel J.', 'Richard H.', 'Casey D.', 'Sam P.', 'Riley K.', 'Morgan B.'],
+      createdAt: 3
+    },
+    {
+      id: 'sport-2',
+      type: 'sport',
+      activity: 'Basketball',
+      org: 'Basketball 3v3 — Olympic Oval',
+      title: '3-on-3 Basketball Pickup',
+      date: 'Wed, May 28',
+      time: '5:00 PM',
+      location: 'Olympic Oval Courts, UCalgary',
+      description: 'Intermediate 3v3 pickup basketball. Bring your A-game!',
+      spots: 6,
+      skillLevel: 'Intermediate',
+      activityType: 'Basketball',
+      attendees: ['Marcus T.', 'Priya K.'],
       createdAt: 2
+    },
+    {
+      id: 'sport-3',
+      type: 'sport',
+      activity: 'Ultimate Frisbee',
+      org: 'Ultimate Frisbee — Oval Fields',
+      title: 'Beginner Ultimate Frisbee',
+      date: 'Sat, May 31',
+      time: '2:00 PM',
+      location: 'UCalgary Oval Fields',
+      description: 'Beginner-friendly ultimate frisbee — just bring yourself!',
+      spots: 14,
+      skillLevel: 'Beginner',
+      activityType: 'Ultimate',
+      attendees: ['Jordan L.', 'Riley K.', 'Morgan B.', 'Alex M.', 'Sam P.', 'Casey D.', 'Taylor R.', 'Chris W.'],
+      createdAt: 1
     }
   ];
 }
@@ -274,7 +306,15 @@ function renderFeed() {
   const clubFeed = document.getElementById('club-feed');
   const sportsFeed = document.getElementById('sports-feed');
 
-  const clubs = [...clubEvents].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  const userProgram = (profile.program || '').toLowerCase();
+  const clubs = [...clubEvents].sort((a, b) => {
+    const aMatch = userProgram && (a.org || '').toLowerCase().includes(userProgram.split(' ').pop());
+    const bMatch = userProgram && (b.org || '').toLowerCase().includes(userProgram.split(' ').pop());
+    if (aMatch && !bMatch) return -1;
+    if (!aMatch && bMatch) return 1;
+    return (b.createdAt || 0) - (a.createdAt || 0);
+  });
   let sports = [...sportsEvents].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   if (activityFilter) {
     sports = sports.filter((ev) => ev.activityType === activityFilter || ev.activity === activityFilter);
