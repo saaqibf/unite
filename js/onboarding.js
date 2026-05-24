@@ -360,6 +360,9 @@
           '<button type="button" id="email-continue" class="btn-primary btn-block" disabled>' +
             (startLogin ? 'Log In' : 'Create Account') +
           '</button>' +
+          '<button type="button" id="demo-skip-btn" style="margin-top:10px;width:100%;background:transparent;border:1.5px solid var(--color-border,#e5e7eb);color:var(--color-text-muted,#6b7280);border-radius:8px;padding:10px;cursor:pointer;font-size:0.875rem;" onclick="(function(){localStorage.setItem(\'unite_token\',\'demo-\'+Date.now());localStorage.setItem(\'unite_profile\',JSON.stringify({name:\'Sarah\',program:\'Computer Science\',year:\'1\',has_car:false,housing:\'On campus\',challenge:\'Planning my degree\',personality:\'Introvert\',interests:[\'Tech\',\'Study Groups\'],primary_intent:\'course_compass\',needed_courses:[\'CPSC331\',\'MATH271\']}));window.location.href=\'/features/course-compass.html\';})()">' +
+            '⚡ Skip for Demo →' +
+          '</button>' +
         '</footer>' +
       '</section>';
 
