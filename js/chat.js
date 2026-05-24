@@ -189,7 +189,24 @@ async function loadPusherConfig(config) {
 }
 
 /**
+ * Fetches persisted chat history from the server.
+ * Returns an array of messages (empty array on failure — graceful degradation).
+ */
+async function fetchChatHistory() {
+  try {
+    const res = await fetch('/api/chat/history?limit=50');
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.messages) ? data.messages : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Initializes Pusher real-time chat and wires up the send form.
+ * On load: fetches persisted history first, then subscribes to live updates.
+ * This means chat messages survive page refreshes and new sessions.
  */
 async function initChat(config) {
   const pusherCfg = await loadPusherConfig(config);
@@ -205,10 +222,27 @@ async function initChat(config) {
     onlineEl.textContent = `${onlineCount} students online`;
   }
 
-  if (messagesEl && config.seedMessages) {
-    config.seedMessages.forEach(function(msg) {
-      renderMessage(msg);
-    });
+  // Load persisted history from the server first
+  const history = await fetchChatHistory();
+
+  if (messagesEl) {
+    if (history.length > 0) {
+      // Real messages exist — show them. Map DB column names to what renderMessage expects.
+      history.forEach(function(msg) {
+        renderMessage({
+          user: msg.user_name || msg.user,
+          program: msg.program || '',
+          year: msg.year || '',
+          text: msg.text,
+          timestamp: msg.created_at || msg.timestamp
+        });
+      });
+    } else if (config.seedMessages) {
+      // No real history yet — show seed messages so chat never looks empty
+      config.seedMessages.forEach(function(msg) {
+        renderMessage(msg);
+      });
+    }
   }
 
   if (typeof Pusher !== 'undefined' && pusherKey) {

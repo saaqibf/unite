@@ -95,6 +95,15 @@ async function initDB() {
       messages JSONB DEFAULT '[]',
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id SERIAL PRIMARY KEY,
+      user_name   VARCHAR(200) NOT NULL,
+      program     VARCHAR(100) DEFAULT '',
+      year        VARCHAR(20)  DEFAULT '',
+      text        TEXT         NOT NULL,
+      created_at  TIMESTAMPTZ  DEFAULT NOW()
+    );
   `);
 
   // Add name-extraction columns to existing databases that predate this migration
@@ -291,8 +300,50 @@ function formatThread(row) {
   };
 }
 
+// In-memory fallback for chat when DB is unavailable
+const memoryChatMessages = [];
+
+// Saves a community chat message to the DB (falls back to memory)
+async function saveChatMessage({ user_name, program, year, text }) {
+  const msg = { user_name, program: program || '', year: year || '', text, created_at: new Date().toISOString() };
+  if (useDatabase()) {
+    try {
+      await query('SET statement_timeout = 3000', []);
+      const { rows } = await query(
+        'INSERT INTO chat_messages (user_name, program, year, text) VALUES ($1,$2,$3,$4) RETURNING id, user_name, program, year, text, created_at',
+        [user_name, program || '', year || '', text]
+      );
+      return rows[0];
+    } catch (e) {
+      console.warn('saveChatMessage DB error, using memory:', e.message);
+    }
+  }
+  // Memory fallback — cap at 200 messages
+  memoryChatMessages.push(msg);
+  if (memoryChatMessages.length > 200) memoryChatMessages.shift();
+  return msg;
+}
+
+// Returns the last `limit` community chat messages (newest last)
+async function getChatHistory(limit = 50) {
+  if (useDatabase()) {
+    try {
+      await query('SET statement_timeout = 3000', []);
+      const { rows } = await query(
+        'SELECT id, user_name, program, year, text, created_at FROM chat_messages ORDER BY created_at DESC LIMIT $1',
+        [limit]
+      );
+      return rows.reverse(); // oldest first for rendering
+    } catch (e) {
+      console.warn('getChatHistory DB error, using memory:', e.message);
+    }
+  }
+  return memoryChatMessages.slice(-limit);
+}
+
 module.exports = {
   query, initDB, getPool,
   useDatabase, getAllListings, insertListing, markListingSold,
-  seedMemoryIfEmpty, getOrCreateThread, appendThreadMessage
+  seedMemoryIfEmpty, getOrCreateThread, appendThreadMessage,
+  saveChatMessage, getChatHistory
 };
