@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join UNite — Onboarding</title>
+  <meta name="description" content="Sign up for UNite with your UCalgary email and tell us about yourself.">
+  <link rel="icon" type="image/svg+xml" href="/css/favicon.svg">
+  <link rel="stylesheet" href="/css/unite-design-system.css">
+  <link rel="stylesheet" href="/css/onboarding.css">
+</head>
+<body class="onboarding-page">
+  <div class="onboarding">
+    <header class="onboarding__header">
+      <div class="onboarding__wordmark" aria-label="UNite">
+        <span>U</span><span class="onboarding__wordmark-n">N</span><span>ite</span>
+      </div>
+    </header>
+
+    <div id="progress-wrap" class="onboarding__progress-wrap" hidden>
+      <div class="onboarding__progress-label">
+        <span>Your profile</span>
+        <span id="progress-text">Question 1 of 8</span>
+      </div>
+      <div class="onboarding__progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0">
+        <div id="progress-fill" class="onboarding__progress-fill"></div>
+      </div>
+    </div>
+
+    <main id="onboarding-root" class="onboarding__main" aria-live="polite"></main>
+  </div>
+
+  <script src="/js/onboarding.js"></script>
+</body>
+</html>
