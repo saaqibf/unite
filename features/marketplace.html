@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketplace — UNite</title>
+  <link rel="icon" type="image/svg+xml" href="/css/favicon.svg">
+  <link rel="stylesheet" href="/css/unite-design-system.css">
+  <link rel="stylesheet" href="/css/marketplace.css">
+</head>
+<body class="marketplace-page">
+  <nav class="nav">
+    <a href="/" class="nav__brand">
+      <img src="/css/logo.svg" alt="UNite" height="32">
+    </a>
+    <button class="nav__toggle" aria-label="Toggle menu" id="nav-toggle">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav__links" id="nav-links">
+      <li><a href="/features/course-compass.html" class="nav__link">Course Compass</a></li>
+      <li><a href="/features/marketplace.html" class="nav__link nav__link--active">Marketplace</a></li>
+      <li><a href="/features/community.html" class="nav__link">Community</a></li>
+    </ul>
+  </nav>
+
+  <main class="marketplace-main">
+    <header class="marketplace-header">
+      <h1 class="marketplace-header__title">Let's Unite</h1>
+      <p class="marketplace-header__sub">UCalgary-only marketplace — meet on campus, no car needed.</p>
+    </header>
+
+    <section class="course-suggestions" id="course-suggestions" hidden>
+      <h2 class="course-suggestions__title">Courses You'll Need</h2>
+      <p class="course-suggestions__sub">Textbooks matching your upcoming semester from Course Compass</p>
+      <div class="course-suggestions__scroll" id="course-suggestions-grid"></div>
+    </section>
+
+    <div class="marketplace-toolbar">
+      <input type="search" id="search-input" class="input-field" placeholder="Search listings..." aria-label="Search listings">
+      <button type="button" class="btn-secondary btn-sm" id="toggle-filters-btn">Filters</button>
+      <button type="button" class="btn-primary btn-sm" id="open-list-btn">+ List It</button>
+    </div>
+
+    <div class="marketplace-filters" id="filters-panel">
+      <select id="filter-category" class="input-field" aria-label="Category">
+        <option value="">All categories</option>
+        <option value="Textbooks">Textbooks</option>
+        <option value="Electronics">Electronics</option>
+        <option value="Furniture">Furniture</option>
+        <option value="Clothing">Clothing</option>
+        <option value="Sports">Sports</option>
+        <option value="Other">Other</option>
+      </select>
+      <input type="number" id="filter-min-price" class="input-field" placeholder="Min $" min="0" aria-label="Minimum price">
+      <input type="number" id="filter-max-price" class="input-field" placeholder="Max $" min="0" aria-label="Maximum price">
+      <select id="filter-condition" class="input-field" aria-label="Condition">
+        <option value="">Any condition</option>
+        <option value="New">New</option>
+        <option value="Like New">Like New</option>
+        <option value="Good">Good</option>
+        <option value="Fair">Fair</option>
+      </select>
+      <select id="filter-meetup" class="input-field" aria-label="Meetup location">
+        <option value="">Any meetup spot</option>
+        <option value="MacHall">MacHall</option>
+        <option value="TFDL">TFDL</option>
+        <option value="Science Theatres">Science Theatres</option>
+        <option value="ICT Building">ICT Building</option>
+        <option value="Engineering Building">Engineering Building</option>
+        <option value="Residence">Residence</option>
+        <option value="Foothills Campus">Foothills Campus</option>
+      </select>
+      <button type="button" class="filter-chip" id="campus-pickup-chip" aria-pressed="false">
+        Campus Pickup Only 🎓
+      </button>
+    </div>
+
+    <div class="marketplace-grid" id="marketplace-grid" aria-live="polite"></div>
+    <p class="marketplace-empty" id="marketplace-empty" hidden>No listings match your filters. Try adjusting search or list something new!</p>
+  </main>
+
+  <!-- List item -->
+  <div class="modal-overlay" id="list-modal" role="dialog" aria-labelledby="list-modal-title" aria-hidden="true">
+    <div class="modal-panel">
+      <div class="modal-panel__header">
+        <h2 class="modal-panel__title" id="list-modal-title">List an Item</h2>
+        <button type="button" class="modal-close" data-close-modal="list-modal" aria-label="Close">&times;</button>
+      </div>
+      <form id="list-form">
+        <div class="photo-upload-grid" id="photo-upload-grid"></div>
+        <div class="input-group">
+          <label class="input-label" for="list-title">Title</label>
+          <input type="text" id="list-title" class="input-field" required maxlength="120" placeholder="e.g. CPSC 331 textbook">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="list-description">Description</label>
+          <textarea id="list-description" class="input-field" rows="3" required placeholder="Condition details, edition, etc."></textarea>
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="list-price">Price (CAD)</label>
+          <input type="number" id="list-price" class="input-field" required min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="list-condition">Condition</label>
+          <select id="list-condition" class="input-field" required>
+            <option value="">Select condition</option>
+            <option value="New">New</option>
+            <option value="Like New">Like New</option>
+            <option value="Good">Good</option>
+            <option value="Fair">Fair</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="list-category">Category</label>
+          <select id="list-category" class="input-field" required>
+            <option value="">Select category</option>
+            <option value="Textbooks">Textbooks</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Furniture">Furniture</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Sports">Sports</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="list-meetup">Campus Meetup Spot</label>
+          <select id="list-meetup" class="input-field" required>
+            <option value="">Select meetup spot</option>
+            <option value="MacHall">MacHall (MacEwan Student Centre)</option>
+            <option value="TFDL">TFDL (Taylor Family Digital Library)</option>
+            <option value="Science Theatres">Science Theatres</option>
+            <option value="ICT Building">ICT Building</option>
+            <option value="Engineering Building">Engineering Building</option>
+            <option value="Residence">Residence (Cascade / Brentwood / Kananaskis)</option>
+            <option value="Foothills Campus">Foothills Campus</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="input-group" id="meetup-other-group" hidden>
+          <label class="input-label" for="list-meetup-other">Other meetup location</label>
+          <input type="text" id="list-meetup-other" class="input-field" placeholder="Describe where to meet">
+        </div>
+        <button type="submit" class="btn-primary btn-block">List It</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Item detail -->
+  <div class="modal-overlay" id="detail-modal" role="dialog" aria-hidden="true">
+    <div class="modal-panel" id="detail-panel"></div>
+  </div>
+
+  <!-- DM thread -->
+  <div class="modal-overlay" id="dm-modal" role="dialog" aria-hidden="true">
+    <div class="modal-panel">
+      <div class="modal-panel__header">
+        <h2 class="modal-panel__title" id="dm-modal-title">Message Seller</h2>
+        <button type="button" class="modal-close" data-close-modal="dm-modal" aria-label="Close">&times;</button>
+      </div>
+      <div class="dm-thread" id="dm-thread"></div>
+      <form id="dm-form" class="cluster">
+        <input type="text" id="dm-input" class="input-field" placeholder="Type a message..." required style="flex:1">
+        <button type="submit" class="btn-primary btn-sm">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    window.UNITE_MARKETPLACE_CONFIG = {
+      apiBase: '/api/marketplace',
+      currentUser: { id: 'demo-primel', name: 'Primel J.', program: 'CS · Y2' }
+    };
+  </script>
+  <script src="/js/marketplace.js"></script>
+  <script>
+    document.getElementById('nav-toggle')?.addEventListener('click', function () {
+      document.querySelector('.nav').classList.toggle('nav--open');
+    });
+  </script>
+</body>
+</html>

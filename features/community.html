@@ -30,44 +30,22 @@
     </div>
 
     <section class="community-feed" id="community-feed">
-      <article class="event-card">
-        <header class="event-card__header">
-          <div>
-            <p class="event-card__org">CS Society</p>
-            <span class="verified">Verified Club</span>
-          </div>
-        </header>
-        <h2 class="event-card__title">Hackathon Prep Night</h2>
-        <div class="event-card__meta">
-          <span>Thu, May 29 · 6:00 PM</span>
-          <span>ICT 121</span>
-        </div>
-        <p class="event-card__desc">Join the CS Society for a prep session before Calgary's biggest student hackathon. Pizza provided. Bring your laptop.</p>
-        <footer class="event-card__footer">
-          <span class="event-card__rsvp">24 students going</span>
-          <button class="btn-primary btn-sm">RSVP</button>
-        </footer>
-      </article>
-
-      <article class="event-card">
-        <header class="event-card__header">
-          <div>
-            <p class="event-card__org">Pickup Soccer — Mac Field</p>
-            <span class="badge badge--gold">Sports</span>
-          </div>
-        </header>
-        <h2 class="event-card__title">Saturday Morning Kickabout</h2>
-        <div class="event-card__meta">
-          <span>Sat, May 31 · 10:00 AM</span>
-          <span>MacEwan Field</span>
-          <span>3 spots left</span>
-        </div>
-        <p class="event-card__desc">Casual 7v7 pickup soccer. All skill levels welcome. Bring cleats or runners.</p>
-        <footer class="event-card__footer">
-          <span class="event-card__rsvp">9 students going</span>
-          <button class="btn-primary btn-sm">Pull Up</button>
-        </footer>
-      </article>
+      <div class="community-actions" id="community-actions">
+        <button type="button" class="btn-primary btn-sm" id="post-club-btn">+ Club Event</button>
+        <button type="button" class="btn-secondary btn-sm" id="post-sport-btn">+ Pull Up Event</button>
+        <select id="filter-activity" class="input-field" style="width:auto;max-width:10rem" aria-label="Filter by activity">
+          <option value="">All activities</option>
+          <option value="Soccer">Soccer</option>
+          <option value="Basketball">Basketball</option>
+          <option value="Volleyball">Volleyball</option>
+          <option value="Running">Running</option>
+          <option value="Gaming">Gaming</option>
+          <option value="Other">Other</option>
+        </select>
+        <button type="button" class="btn-secondary btn-sm community-actions__admin" id="admin-verified-toggle">
+          <span id="admin-verified-label">Demo: Verify Club (off)</span>
+        </button>
+      </div>
     </section>
 
     <section class="community-chat-section" id="community-chat">
@@ -93,13 +71,67 @@
     </section>
   </div>
 
+  <div class="modal-overlay" id="post-modal" role="dialog" aria-hidden="true">
+    <div class="modal-panel">
+      <div class="modal-panel__header">
+        <h2 class="modal-panel__title" id="post-modal-title">Post Event</h2>
+        <button type="button" class="modal-close" data-close-modal="post-modal" aria-label="Close">&times;</button>
+      </div>
+      <form id="post-form">
+        <input type="hidden" id="post-type" value="sport">
+        <div class="input-group" id="club-only-fields" hidden>
+          <label class="input-label" for="post-org">Club name</label>
+          <input type="text" id="post-org" class="input-field" placeholder="e.g. CS Society">
+        </div>
+        <div class="input-group" id="sport-only-fields">
+          <label class="input-label" for="post-activity">Activity</label>
+          <input type="text" id="post-activity" class="input-field" placeholder="e.g. Pickup Soccer">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="post-title">Event name</label>
+          <input type="text" id="post-title" class="input-field" required>
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="post-date">Date</label>
+          <input type="text" id="post-date" class="input-field" required placeholder="e.g. Sat, May 31">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="post-time">Time</label>
+          <input type="text" id="post-time" class="input-field" required placeholder="e.g. 10:00 AM">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="post-location">Location</label>
+          <input type="text" id="post-location" class="input-field" required placeholder="e.g. MacEwan Field">
+        </div>
+        <div class="input-group" id="sport-spots-field">
+          <label class="input-label" for="post-spots">Spots available</label>
+          <input type="number" id="post-spots" class="input-field" min="2" value="10">
+        </div>
+        <div class="input-group" id="sport-skill-field">
+          <label class="input-label" for="post-skill">Skill level</label>
+          <select id="post-skill" class="input-field">
+            <option value="All levels">All levels</option>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="post-description">Description</label>
+          <textarea id="post-description" class="input-field" rows="3" required></textarea>
+        </div>
+        <button type="submit" class="btn-primary btn-block">Post</button>
+      </form>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
   <script>
     window.UNITE_CHAT_CONFIG = {
       pusherKey: '',
       pusherCluster: 'mt1',
       onlineCount: 12,
-      currentUser: { name: 'Richard H.', program: 'CS · Y2' },
+      currentUser: { name: 'Primel J.', program: 'CS · Y2' },
       seedMessages: [
         { user: 'Sarah C.', program: 'CS · Y1', text: 'Anyone taking CPSC 331 next semester?', timestamp: '2026-05-23T18:02:00Z' },
         { user: 'Marcus T.', program: 'ENGG · Y3', text: 'Yeah! Heard the prof is tough but fair.', timestamp: '2026-05-23T18:04:00Z' },
@@ -109,10 +141,6 @@
     };
   </script>
   <script src="/js/chat.js"></script>
-  <script>
-    document.getElementById('nav-toggle')?.addEventListener('click', function() {
-      document.querySelector('.nav').classList.toggle('nav--open');
-    });
-  </script>
+  <script src="/js/community.js"></script>
 </body>
 </html>
