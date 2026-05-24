@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 
 const authRoutes = require('./routes/auth');
 const aiRoutes = require('./routes/ai');
+const { initDB } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,8 +51,17 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`UNite server running on port ${PORT}`);
-});
+// Starts the server — initialises DB tables on first boot so Railway works without manual migration
+async function start() {
+  try {
+    await initDB();
+  } catch (err) {
+    console.error('Database init failed:', err.message);
+  }
+  app.listen(PORT, () => {
+    console.log(`UNite server running on port ${PORT}`);
+  });
+}
 
+start();
 module.exports = app;
