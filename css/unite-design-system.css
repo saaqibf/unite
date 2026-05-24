@@ -9,6 +9,19 @@
 /* ─── Design Tokens ─────────────────────────────────────────────── */
 
 :root {
+  /* Landing page tokens (approved design) */
+  --red:      #CC0033;
+  --red-dark: #A3002A;
+  --gold:     #FFCD00;
+  --black:    #0A0A0A;
+  --white:    #FFFFFF;
+  --muted:    #6B6B6B;
+  --surface:  #F4F4F4;
+  --panel:    #111111;
+  --fd: 'Bebas Neue', sans-serif;
+  --fb: 'DM Sans', sans-serif;
+  --fm: 'JetBrains Mono', monospace;
+
   /* Colors */
   --color-primary: #CC0033;
   --color-primary-dark: #A3002A;

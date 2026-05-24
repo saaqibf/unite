@@ -1,5 +1,11 @@
 # UNite Changelog
 
+## [0.5.0] — Hour 2 — Richard (Pair B)
+- Final approved landing page — animated hero, feature strips, stats, testimonials, CTA
+- Wired all nav and CTA links to feature routes
+- Landing page CSS tokens in shared design system
+- Judge screenshots: 01-landing-hero, 01b-landing-features, 01c-landing-stats, 01d-landing-mobile
+
 ## [0.4.0] — Hour 2 — Primel (Pair B)
 - Sports & Hobbies inline post form (`unite_sports_events` localStorage)
 - Verified club badges for 3 hardcoded UCalgary clubs (gold checkmark)
