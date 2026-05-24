@@ -147,18 +147,30 @@
   </div>
 
   <script>
-    window.UNITE_CHAT_CONFIG = {
-      pusherKey: window.PUSHER_KEY || '',
-      pusherCluster: window.PUSHER_CLUSTER || 'mt1',
-      onlineCount: 12,
-      currentUser: { name: 'Primel J.', program: 'CS · Y2' },
-      seedMessages: [
-        { user: 'Sarah C.', program: 'CS · Y1', text: 'Anyone taking CPSC 331 next semester?', timestamp: '2026-05-23T18:02:00Z' },
-        { user: 'Marcus T.', program: 'ENGG · Y3', text: 'Yeah! Heard the prof is tough but fair.', timestamp: '2026-05-23T18:04:00Z' },
-        { user: 'Priya K.', program: 'BUS · Y2', text: 'Is the CS Society hackathon prep still on Thursday?', timestamp: '2026-05-23T18:06:00Z' },
-        { user: 'Richard H.', program: 'CS · Y2', text: 'Yep — ICT 121 at 6pm. Pizza included 🍕', timestamp: '2026-05-23T18:08:00Z' }
-      ]
-    };
+    (function() {
+      // Resolve logged-in user from localStorage — never hardcode a name
+      var profile = {};
+      var user = {};
+      try { profile = JSON.parse(localStorage.getItem('unite_profile') || '{}'); } catch(e) {}
+      try { user = JSON.parse(localStorage.getItem('unite_user') || '{}'); } catch(e) {}
+      var firstName = profile.name || user.first_name || user.display_name || 'Student';
+      var lastName  = user.last_name || '';
+      var chatName  = lastName ? firstName + ' ' + lastName.charAt(0) + '.' : firstName;
+      var prog = profile.program || 'UCalgary';
+      var yr   = profile.year ? ' · Y' + profile.year : '';
+      window.UNITE_CHAT_CONFIG = {
+        pusherKey: window.PUSHER_KEY || '',
+        pusherCluster: window.PUSHER_CLUSTER || 'mt1',
+        onlineCount: 12,
+        currentUser: { name: chatName, program: prog + yr },
+        seedMessages: [
+          { user: 'Sarah C.', program: 'CS · Y1', text: 'Anyone taking CPSC 331 next semester?', timestamp: '2026-05-23T18:02:00Z' },
+          { user: 'Marcus T.', program: 'ENGG · Y3', text: 'Yeah! Heard the prof is tough but fair.', timestamp: '2026-05-23T18:04:00Z' },
+          { user: 'Priya K.', program: 'BUS · Y2', text: 'Is the CS Society hackathon prep still on Thursday?', timestamp: '2026-05-23T18:06:00Z' },
+          { user: 'Richard H.', program: 'CS · Y2', text: 'Yep — ICT 121 at 6pm. Pizza included 🍕', timestamp: '2026-05-23T18:08:00Z' }
+        ]
+      };
+    })();
   </script>
   <script src="/js/chat.js"></script>
   <script src="/js/community.js"></script>
