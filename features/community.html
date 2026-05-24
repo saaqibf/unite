@@ -12,21 +12,10 @@
     window.PUSHER_CLUSTER = 'mt1';
   </script>
   <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
+  <script src="/js/unite-nav.js"></script>
 </head>
 <body class="community-page">
-  <nav class="nav">
-    <a href="/" class="nav__brand">
-      <img src="/css/logo.svg" alt="UNite" height="32">
-    </a>
-    <button class="nav__toggle" aria-label="Toggle menu" id="nav-toggle">
-      <span></span><span></span><span></span>
-    </button>
-    <ul class="nav__links" id="nav-links">
-      <li><a href="/features/course-compass.html" class="nav__link">Course Compass</a></li>
-      <li><a href="/features/marketplace.html" class="nav__link">Marketplace</a></li>
-      <li><a href="/features/community.html" class="nav__link nav__link--active">Community</a></li>
-    </ul>
-  </nav>
+  <script>injectNav('community');</script>
 
   <div class="community-layout">
     <div class="community-tabs">

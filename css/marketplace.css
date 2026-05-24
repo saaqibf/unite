@@ -15,6 +15,7 @@
   margin-inline: auto;
   width: 100%;
   padding: var(--space-md);
+  padding-top: 80px;
   padding-bottom: calc(var(--space-2xl) + 4rem);
 }
 
@@ -375,4 +376,31 @@
   text-align: center;
   padding: var(--space-2xl);
   color: var(--color-text-muted);
+}
+
+@media (max-width: 800px) {
+  .marketplace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .marketplace-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .marketplace-toolbar .input-field,
+  .marketplace-toolbar .btn-primary,
+  .marketplace-toolbar .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .marketplace-filters {
+    flex-direction: column;
+  }
+
+  .marketplace-filters select.input-field,
+  .marketplace-filters .filter-chip {
+    width: 100%;
+  }
 }
