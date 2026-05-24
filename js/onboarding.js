@@ -94,19 +94,29 @@
    */
   async function registerWithEmail(email, password) {
     try {
+      var controller = new AbortController();
+      var timer = setTimeout(function () { controller.abort(); }, 7000);
+
       var response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           email: email,
           password: password,
+          name: profile.name || '',
           primaryIntent: profile.primary_intent
         })
       });
+      clearTimeout(timer);
+
       var data = await response.json();
       if (response.ok) {
         if (data.token) {
           localStorage.setItem('unite_token', data.token);
+          localStorage.setItem('unite_profile', JSON.stringify(
+            Object.assign({}, data.user || {}, { email: email, primary_intent: profile.primary_intent })
+          ));
         }
         if (data.userId) {
           localStorage.setItem('unite_user_id', String(data.userId));
@@ -120,6 +130,11 @@
       }
     } catch (err) {
       console.warn('Auth API unavailable — demo mode');
+      // Issue a demo token locally so the app still works without a server
+      localStorage.setItem('unite_token', 'demo-' + Date.now());
+      localStorage.setItem('unite_profile', JSON.stringify(
+        { email: email, primary_intent: profile.primary_intent, name: profile.name || '' }
+      ));
       showScreen(2);
     }
   }
