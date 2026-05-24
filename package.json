@@ -27,6 +27,7 @@
     "pusher": "^5.2.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "puppeteer": "^25.0.4"
   }
 }

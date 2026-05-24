@@ -3,3 +3,17 @@ node_modules/
 .DS_Store
 *.log
 dist/
+
+# Internal planning docs — not for judges
+AGENT_CONTEXT.md
+MASTER_PLAN.md
+PUSH_REPORT_TEMPLATE.md
+CHANGELOG.md
+STATUS_CHECK.md
+AUTO_GIT_CHECK.md
+DISCORD_*.md
+PROMPT_*.md
+LOCAL_SETUP.md
+reports/
+scripts/
+*.local.md
