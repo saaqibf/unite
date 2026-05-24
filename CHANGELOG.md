@@ -1,5 +1,10 @@
 # UNite Changelog
 
+## [0.5.0] — Hour 2–3 — Mousa (Pair A)
+- Onboarding flow: landing intent → 11 screens, `@ucalgary.ca` validation, 8 questions, welcome cards
+- `unite_profile` and `unite_intent` localStorage keys for cross-feature intelligence
+- Merged Saaqib auth API (`/api/auth/register`) with Pair B marketplace server
+
 ## [0.4.0] — Hour 2 — Primel (Pair B)
 - Sports & Hobbies inline post form (`unite_sports_events` localStorage)
 - Verified club badges for 3 hardcoded UCalgary clubs (gold checkmark)
