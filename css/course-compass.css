@@ -1,0 +1,527 @@
+/* Course Compass — page-specific styles, built on top of unite-design-system.css */
+
+/* ─── Layout ─────────────────────────────────────────────────────── */
+
+.cc-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: calc(100dvh - var(--nav-height));
+  background: var(--color-surface);
+}
+
+@media (min-width: 768px) {
+  .cc-layout {
+    grid-template-columns: 280px 1fr;
+  }
+}
+
+/* ─── Sidebar ─────────────────────────────────────────────────────── */
+
+.cc-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-white);
+  border-right: 1px solid var(--color-border);
+}
+
+/* Student profile card */
+.cc-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+}
+
+.cc-profile__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.cc-profile__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.cc-profile__name {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* GPA card */
+.cc-gpa-card {
+  padding: var(--space-md);
+  text-align: center;
+}
+
+.cc-gpa-card__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.cc-gpa-card__value {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  letter-spacing: 0.02em;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.cc-gpa-card__sub {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* Credits progress bar */
+.cc-credits-card {
+  padding: var(--space-md);
+}
+
+.cc-credits-card__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.cc-credits-bar {
+  height: 8px;
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-bottom: 0.35rem;
+}
+
+.cc-credits-bar__fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-pill);
+  transition: width 0.6s ease;
+}
+
+.cc-credits-card__sub {
+  font-size: 0.8125rem;
+}
+
+/* Tab nav */
+.cc-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: auto;
+}
+
+.cc-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0.65rem var(--space-md);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-input);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  text-align: left;
+  width: 100%;
+}
+
+.cc-tab:hover {
+  background: var(--color-surface);
+  color: var(--color-black);
+}
+
+.cc-tab--active {
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-weight: 600;
+}
+
+.cc-tab--active:hover {
+  background: var(--color-primary-dark);
+  color: var(--color-white);
+}
+
+/* ─── Main panel ──────────────────────────────────────────────────── */
+
+.cc-main {
+  padding: var(--space-md);
+  overflow-y: auto;
+}
+
+@media (min-width: 768px) {
+  .cc-main {
+    padding: var(--space-xl);
+  }
+}
+
+.cc-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.cc-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+/* ─── Setup banner ────────────────────────────────────────────────── */
+
+.cc-setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+  max-width: 480px;
+}
+
+/* ─── Roadmap ─────────────────────────────────────────────────────── */
+
+.cc-roadmap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.cc-semester {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--color-white);
+}
+
+.cc-semester__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-black);
+  color: var(--color-white);
+}
+
+.cc-semester__label {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+}
+
+.cc-semester__credits {
+  font-size: 0.8125rem;
+  color: rgba(255,255,255,0.65);
+}
+
+.cc-semester__courses {
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-course-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 0.75rem var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+}
+
+.cc-course-row:last-child {
+  border-bottom: none;
+}
+
+.cc-course-row:hover {
+  background: var(--color-surface);
+}
+
+.cc-course-row--completed {
+  opacity: 0.6;
+}
+
+.cc-course-code {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  min-width: 7rem;
+  flex-shrink: 0;
+}
+
+.cc-course-name {
+  font-size: 0.9375rem;
+  flex: 1;
+}
+
+.cc-course-units {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.cc-course-note {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  font-style: italic;
+}
+
+/* Next courses card */
+.cc-next-courses {
+  padding: var(--space-lg);
+}
+
+.cc-next-courses__title {
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.cc-next-courses__sub {
+  font-size: 0.875rem;
+  margin-bottom: var(--space-md);
+}
+
+.cc-course-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.75rem;
+  background: rgba(204, 0, 51, 0.08);
+  color: var(--color-primary);
+  border: 1px solid rgba(204, 0, 51, 0.2);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+/* ─── Loading ─────────────────────────────────────────────────────── */
+
+.cc-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+  color: var(--color-text-muted);
+}
+
+.cc-loading__spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Prereq Tree ─────────────────────────────────────────────────── */
+
+.cc-prereq-search {
+  max-width: 400px;
+}
+
+.cc-prereq-tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.cc-prereq-chain {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+}
+
+.cc-prereq-chain__title {
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+  font-size: 0.9375rem;
+}
+
+.cc-prereq-chain__flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.cc-prereq-node {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-input);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 2px solid;
+}
+
+.cc-prereq-node--completed {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.cc-prereq-node--next {
+  background: rgba(204, 0, 51, 0.08);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.cc-prereq-node--locked {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.cc-prereq-arrow {
+  color: var(--color-text-muted);
+  font-size: 1rem;
+}
+
+/* ─── GPA Simulator ─────────────────────────────────────────────────── */
+
+.cc-gpa-scale__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.5rem;
+}
+
+.cc-grade-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: 0.8125rem;
+}
+
+.cc-grade-tile__letter {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--color-primary);
+}
+
+.cc-grade-tile__points {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.cc-grade-tile__pct {
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+}
+
+.cc-gpa-simulator {
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-gpa-course-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.cc-gpa-course-row input.input-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.cc-gpa-course-row select.input-field {
+  flex: none;
+  width: auto;
+}
+
+.cc-gpa-course-row__remove {
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  padding: 0.25rem;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.cc-gpa-course-row__remove:hover {
+  color: var(--color-danger);
+}
+
+.cc-gpa-result {
+  text-align: center;
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-border);
+}
+
+.cc-gpa-result__value {
+  font-family: var(--font-display);
+  font-size: 3.5rem;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.cc-gpa-result__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.cc-gpa-result__sub {
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+.cc-whatif {
+  padding: var(--space-lg);
+}
+
+.cc-whatif__result {
+  margin-top: var(--space-md);
+  font-weight: 600;
+  color: var(--color-primary);
+  font-size: 0.9375rem;
+  min-height: 1.4rem;
+}
+
+/* ─── AI Advisor Chat ─────────────────────────────────────────────── */
+
+.cc-advisor-chat {
+  height: 420px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.cc-quick-questions {
+  margin-top: var(--space-md);
+}
