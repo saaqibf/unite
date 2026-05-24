@@ -118,6 +118,18 @@ async function initDB() {
     WHERE first_name IS NULL OR first_name = ''
   `);
 
+  // Add columns introduced after initial deploy — safe to run multiple times
+  await p.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(10);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_expires TIMESTAMP;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_complete BOOLEAN DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(80);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(80);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(160);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS initials VARCHAR(4);
+  `).catch(e => console.warn('Column migration warn:', e.message));
+
   console.log('Database tables ready');
 
   // Seed demo listings if the marketplace is empty

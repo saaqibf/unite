@@ -180,8 +180,11 @@
     }
   }
 
+  // Stores the demo code from registration to show on verification screen
+  var _pendingDemoCode = null;
+
   /**
-   * Registers the student — on failure auto-tries login, then falls back to demo mode.
+   * Registers the student — on success shows 6-digit verification screen.
    */
   async function registerWithEmail(email, password) {
     try {
@@ -192,11 +195,18 @@
       }, 5000);
 
       if (result.ok) {
+        if (result.data.needs_verification) {
+          // Save demo code for display on verification screen
+          _pendingDemoCode = result.data.demo_code || null;
+          profile.email = email;
+          showScreen(1); // Go to verification code screen
+          return;
+        }
+        // DB was down — got token directly
         handleRegistrationSuccess(result.data, email);
         return;
       }
 
-      // Account already exists — try logging in automatically
       if (result.status === 409) {
         await loginWithEmail(email, password);
         return;
@@ -204,10 +214,8 @@
 
       showError(result.data.error || 'Registration failed. Try again.');
     } catch (err) {
-      // Server timeout or network error — issue demo token so judges can proceed
       console.warn('Register unavailable, using demo mode');
       localStorage.setItem('unite_token', 'demo-' + Date.now());
-      // Pre-fill name from email for Q1
       var emailLocal = email.split('@')[0];
       var parts = emailLocal.split('.');
       var firstName = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : '';
@@ -215,7 +223,7 @@
       localStorage.setItem(PROFILE_KEY, JSON.stringify(
         { email: email, primary_intent: profile.primary_intent, name: profile.name }
       ));
-      showScreen(3); // Go to Q1 even in offline/demo mode
+      showScreen(3);
     }
   }
 
@@ -296,6 +304,16 @@
       needed_courses: profile.needed_courses.slice()
     };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(saved));
+
+    // Persist to DB and mark onboarding_complete = true
+    var token = localStorage.getItem('unite_token');
+    if (token) {
+      fetch('/api/auth/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(saved)
+      }).catch(function() {});
+    }
   }
 
   /**
@@ -548,33 +566,139 @@
   }
 
   /**
-   * Renders the email verification confirmation screen.
+   * Renders the 6-digit code verification screen.
    */
   function renderVerificationScreen() {
     hideProgress();
+    var demoBanner = _pendingDemoCode
+      ? '<div style="background:#FFCD00;color:#000;border-radius:10px;padding:12px 16px;font-size:14px;font-weight:600;margin-bottom:20px;text-align:center;">Demo mode — your code is <span style="font-size:20px;letter-spacing:4px;">' + _pendingDemoCode + '</span></div>'
+      : '';
+
     root.innerHTML =
       '<section class="onboarding__screen">' +
         '<div class="onboarding__verify-icon" aria-hidden="true">📬</div>' +
         '<h1 class="onboarding__title">Check your inbox</h1>' +
-        '<p class="onboarding__subtitle">We sent a verification link to your UCalgary email. Check your inbox.</p>' +
+        '<p class="onboarding__subtitle">We sent a 6-digit code to <strong>' + (profile.email || '') + '</strong></p>' +
         '<div class="onboarding__body">' +
-          '<p class="text-muted" style="font-size:0.9375rem;margin-bottom:var(--space-md);">' +
-            'Sent to <strong>' + profile.email + '</strong>' +
-          '</p>' +
-          '<button type="button" id="resend-btn" class="btn-secondary btn-block">Resend verification email</button>' +
+          demoBanner +
+          '<div id="code-inputs" style="display:flex;gap:10px;justify-content:center;margin:20px 0;">' +
+            [0,1,2,3,4,5].map(function(i) {
+              return '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" ' +
+                'class="code-digit-input" data-idx="' + i + '" ' +
+                'style="width:48px;height:56px;border:2px solid #e0e0e0;border-radius:12px;font-size:24px;font-weight:700;text-align:center;outline:none;transition:border-color 0.2s;" />';
+            }).join('') +
+          '</div>' +
+          '<div id="verify-error" style="color:#CC0033;font-size:14px;text-align:center;min-height:20px;"></div>' +
+          '<button type="button" id="resend-btn" style="background:none;border:none;color:#CC0033;font-size:14px;cursor:pointer;text-decoration:underline;width:100%;text-align:center;margin-top:8px;">Resend Code</button>' +
         '</div>' +
         '<footer class="onboarding__footer">' +
-          '<button type="button" id="verify-continue" class="btn-primary btn-block">Continue</button>' +
+          '<button type="button" id="verify-btn" class="btn-primary btn-block">Verify</button>' +
+          '<button type="button" id="skip-demo-verify" class="btn-secondary btn-block" style="margin-top:10px;">⚡ Skip for Demo →</button>' +
         '</footer>' +
       '</section>';
 
-    document.getElementById('resend-btn').addEventListener('click', function () {
-      var btn = document.getElementById('resend-btn');
-      btn.textContent = 'Verification email sent!';
-      btn.disabled = true;
+    // Code input auto-advance
+    var inputs = document.querySelectorAll('.code-digit-input');
+    inputs.forEach(function(inp, idx) {
+      inp.addEventListener('input', function() {
+        inp.value = inp.value.replace(/[^0-9]/g, '').slice(-1);
+        if (inp.value && idx < inputs.length - 1) inputs[idx + 1].focus();
+      });
+      inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' && !inp.value && idx > 0) inputs[idx - 1].focus();
+      });
+      inp.addEventListener('focus', function() { inp.style.borderColor = '#CC0033'; });
+      inp.addEventListener('blur', function() { inp.style.borderColor = inp.value ? '#0a0a0a' : '#e0e0e0'; });
     });
 
-    document.getElementById('verify-continue').addEventListener('click', goNext);
+    // Auto-fill from demo code
+    if (_pendingDemoCode) {
+      _pendingDemoCode.split('').forEach(function(d, i) {
+        if (inputs[i]) { inputs[i].value = d; inputs[i].style.borderColor = '#0a0a0a'; }
+      });
+    }
+
+    // Resend button with 60-second cooldown
+    var resendBtn = document.getElementById('resend-btn');
+    var resendCooldown = 0;
+    function startResendCooldown(secs) {
+      resendCooldown = secs;
+      resendBtn.disabled = true;
+      resendBtn.style.opacity = '0.5';
+      var iv = setInterval(function() {
+        resendCooldown--;
+        resendBtn.textContent = 'Resend Code (' + resendCooldown + 's)';
+        if (resendCooldown <= 0) {
+          clearInterval(iv);
+          resendBtn.textContent = 'Resend Code';
+          resendBtn.disabled = false;
+          resendBtn.style.opacity = '1';
+        }
+      }, 1000);
+    }
+    resendBtn.addEventListener('click', async function() {
+      startResendCooldown(60);
+      try {
+        var r = await fetchWithTimeout('/api/auth/resend-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: profile.email })
+        }, 5000);
+        if (r.ok && r.data.demo_code) {
+          _pendingDemoCode = r.data.demo_code;
+          document.getElementById('verify-error').textContent = '';
+          // Update demo banner
+          var existing = root.querySelector('[style*="FFCD00"]');
+          if (existing) existing.querySelector('span').textContent = _pendingDemoCode;
+          r.data.demo_code.split('').forEach(function(d, i) {
+            if (inputs[i]) { inputs[i].value = d; inputs[i].style.borderColor = '#0a0a0a'; }
+          });
+        }
+      } catch(e) { /* silent */ }
+    });
+
+    // Skip for demo
+    document.getElementById('skip-demo-verify').addEventListener('click', function() {
+      var emailLocal = (profile.email || 'student@ucalgary.ca').split('@')[0];
+      var firstName = emailLocal.split('.')[0];
+      firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+      localStorage.setItem('unite_token', 'demo-' + Date.now());
+      localStorage.setItem('unite_user', JSON.stringify({ id: null, email: profile.email, first_name: firstName, display_name: firstName, initials: firstName.charAt(0) }));
+      localStorage.setItem(PROFILE_KEY, JSON.stringify({ name: firstName, email: profile.email, primary_intent: profile.primary_intent }));
+      showScreen(3);
+    });
+
+    // Verify button
+    document.getElementById('verify-btn').addEventListener('click', async function() {
+      var code = Array.from(inputs).map(function(i) { return i.value; }).join('');
+      if (code.length < 6) {
+        document.getElementById('verify-error').textContent = 'Enter all 6 digits.';
+        return;
+      }
+      var btn = document.getElementById('verify-btn');
+      btn.disabled = true;
+      btn.textContent = 'Verifying…';
+      try {
+        var r = await fetchWithTimeout('/api/auth/verify-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: profile.email, code: code })
+        }, 5000);
+        if (r.ok) {
+          handleRegistrationSuccess(r.data, profile.email);
+        } else {
+          document.getElementById('verify-error').textContent = (r.data && r.data.error) || 'Invalid code. Try again.';
+          btn.disabled = false;
+          btn.textContent = 'Verify';
+        }
+      } catch(e) {
+        // Network error — proceed anyway (demo mode)
+        var emailLocal2 = (profile.email || '').split('@')[0];
+        var fn = emailLocal2.split('.')[0];
+        fn = fn.charAt(0).toUpperCase() + fn.slice(1);
+        handleRegistrationSuccess({ token: 'demo-' + Date.now(), user: { id: null, email: profile.email, first_name: fn, display_name: fn, initials: fn.charAt(0) } }, profile.email);
+      }
+    });
   }
 
   /**
@@ -883,6 +1007,17 @@
   function init() {
     var params = new URLSearchParams(window.location.search);
     var demoScreen = params.get('screen');
+    var reason = params.get('reason');
+
+    // Already has a token but incomplete profile — skip signup, go straight to Q1
+    if (reason === 'incomplete') {
+      var token = localStorage.getItem('unite_token');
+      if (token) {
+        currentScreen = 3;
+        renderScreen();
+        return;
+      }
+    }
 
     if (demoScreen === 'program') {
       localStorage.setItem(INTENT_KEY, 'marketplace');

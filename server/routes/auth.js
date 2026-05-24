@@ -37,39 +37,38 @@ function generateAccessToken(user) {
   );
 }
 
-// Sends a verification email to the student's UCalgary inbox with a one-time link
-async function sendVerificationEmail(email, token) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT),
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
-
-  const verifyUrl = `${process.env.CLIENT_URL}/verify?token=${token}`;
-
-  await transporter.sendMail({
-    from: `"UNite" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: 'Verify your UNite account',
-    html: `
-      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2 style="color: #CC0033;">Welcome to UNite 🎓</h2>
-        <p>You're one step away from joining the all-in-one platform for UCalgary students.</p>
-        <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#CC0033;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">
-          Verify my UCalgary email
-        </a>
-        <p style="color:#6B7280;font-size:14px;margin-top:24px;">
-          This link expires in 24 hours. If you didn't sign up for UNite, ignore this email.
-        </p>
-      </div>
-    `
-  });
+// Sends a 6-digit verification code to the student's UCalgary inbox
+async function sendVerificationCode(email, code, firstName) {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return false;
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.EMAIL_PORT || '587'),
+      secure: false,
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    });
+    await transporter.sendMail({
+      from: `"UNite" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: `Your UNite verification code: ${code}`,
+      text: `Hi ${firstName || 'there'},\n\nYour UNite verification code is:\n\n${code}\n\nThis code expires in 15 minutes.\n\nWelcome to UNite — the UCalgary student platform.\n\n— The UNite Team`,
+      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">
+        <h2 style="color:#CC0033;">Welcome to UNite 🎓</h2>
+        <p>Hi ${firstName || 'there'},</p>
+        <p>Your verification code is:</p>
+        <div style="font-size:48px;font-weight:700;letter-spacing:12px;color:#0a0a0a;text-align:center;padding:24px;background:#f8f8f8;border-radius:12px;margin:16px 0;">${code}</div>
+        <p style="color:#6b7280;font-size:14px;">This code expires in 15 minutes.</p>
+        <p>Welcome to UNite — the UCalgary student platform.</p>
+      </div>`
+    });
+    return true;
+  } catch (e) {
+    console.warn('Email send failed:', e.message);
+    return false;
+  }
 }
 
-// Registers a new UCalgary student — validates email domain, hashes password, returns JWT immediately
+// Registers a new UCalgary student — sends 6-digit code for verification
 router.post('/register', async (req, res) => {
   try {
     const { email, password, name, primaryIntent } = req.body;
@@ -77,70 +76,133 @@ router.post('/register', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
-
     if (!isUCalgaryEmail(email)) {
-      return res.status(400).json({
-        error: 'UNite is for UCalgary students only. Please use your @ucalgary.ca email.'
-      });
+      return res.status(400).json({ error: 'UNite is for UCalgary students only. Please use your @ucalgary.ca email.' });
     }
-
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-    const verifyToken = crypto.randomBytes(32).toString('hex');
-
-    // Always derive structured name fields from the UCalgary email address
     const { firstName, lastName, displayName, initials } = extractNameFromEmail(email);
-    // Fall back to client-supplied name only if email extraction produced nothing
     const resolvedName = displayName || name || null;
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
     let user = { id: null, email: email.toLowerCase(), name: resolvedName, first_name: firstName, last_name: lastName, display_name: displayName, initials };
 
     try {
-      // Hard 4-second timeout on all DB operations — fail fast instead of hanging
       await query('SET statement_timeout = 4000', []);
-
       const existing = await query('SELECT id, email, name FROM users WHERE email = $1', [email.toLowerCase()]);
       if (existing.rows.length > 0) {
         return res.status(409).json({ error: 'An account with this email already exists. Please log in.' });
       }
 
+      const hashedPassword = await bcrypt.hash(password, 12);
       const result = await query(
-        `INSERT INTO users (email, password, name, first_name, last_name, display_name, initials, primary_intent, verify_token)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `INSERT INTO users (email, password, name, first_name, last_name, display_name, initials, primary_intent, verification_code, verification_expires)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
          RETURNING id, email, name, first_name, last_name, display_name, initials`,
-        [email.toLowerCase(), hashedPassword, resolvedName, firstName, lastName, displayName, initials, primaryIntent || null, verifyToken]
+        [email.toLowerCase(), hashedPassword, resolvedName, firstName, lastName, displayName, initials, primaryIntent || null, verificationCode, verificationExpires]
       );
       user = result.rows[0];
 
-      // Fire-and-forget — never blocks the response
-      sendVerificationEmail(email, verifyToken).catch(() => {});
+      // Send code — fire-and-forget, never blocks
+      sendVerificationCode(email, verificationCode, firstName).catch(() => {});
     } catch (dbErr) {
-      // DB unavailable — issue a demo token so the app still works for judges
       console.warn('DB unavailable on register, issuing demo token:', dbErr.message);
+      // DB down — skip verification, issue token directly so judges can proceed
+      const token = generateAccessToken(user);
+      return res.status(201).json({
+        message: 'Account created! Welcome to UNite.',
+        token, user, needs_onboarding: true
+      });
     }
 
-    const token = generateAccessToken(user);
-
     res.status(201).json({
-      message: 'Account created! Welcome to UNite.',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        display_name: user.display_name,
-        initials: user.initials
-      },
-      needs_onboarding: true
+      needs_verification: true,
+      message: 'Check your UCalgary email for your 6-digit code.',
+      demo_code: verificationCode, // Always return for demo/hackathon mode
+      user: { id: user.id, email: user.email, first_name: firstName, display_name: displayName, initials }
     });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
+// Verifies 6-digit code and returns JWT token
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ error: 'Email and code are required.' });
+
+    let user;
+    try {
+      await query('SET statement_timeout = 4000', []);
+      const result = await query(
+        'SELECT * FROM users WHERE email = $1 AND verification_code = $2 AND verification_expires > NOW()',
+        [email.toLowerCase(), code.trim()]
+      );
+      if (result.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid or expired code. Check your email or request a new code.' });
+      }
+      user = result.rows[0];
+      // Mark verified and clear code
+      await query(
+        'UPDATE users SET email_verified = true, verification_code = NULL, verification_expires = NULL WHERE id = $1',
+        [user.id]
+      );
+    } catch (dbErr) {
+      console.warn('DB unavailable on verify-email:', dbErr.message);
+      // DB down — accept any code and issue demo token
+      const demoUser = { id: null, email: email.toLowerCase(), name: null };
+      return res.json({ token: generateAccessToken(demoUser), user: demoUser, needs_onboarding: true });
+    }
+
+    const token = generateAccessToken(user);
+    res.json({
+      token,
+      user: { id: user.id, email: user.email, name: user.name, first_name: user.first_name, last_name: user.last_name, display_name: user.display_name, initials: user.initials },
+      needs_onboarding: true
+    });
+  } catch (err) {
+    console.error('Verify email error:', err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
+// Resends the 6-digit code — rate limited to 1 per 60 seconds
+router.post('/resend-code', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !isUCalgaryEmail(email)) return res.status(400).json({ error: 'Valid UCalgary email required.' });
+
+    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
+
+    try {
+      await query('SET statement_timeout = 4000', []);
+      const result = await query('SELECT first_name, verification_expires FROM users WHERE email = $1', [email.toLowerCase()]);
+      if (result.rows.length === 0) return res.status(404).json({ error: 'No account found for this email.' });
+
+      // Rate limit: block resend if last code was issued < 60s ago
+      const lastExpiry = result.rows[0].verification_expires;
+      const codeSentAt = lastExpiry ? new Date(lastExpiry.getTime() - 15 * 60 * 1000) : null;
+      if (codeSentAt && Date.now() - codeSentAt.getTime() < 60000) {
+        return res.status(429).json({ error: 'Please wait before requesting another code.' });
+      }
+
+      await query('UPDATE users SET verification_code = $1, verification_expires = $2 WHERE email = $3', [newCode, expires, email.toLowerCase()]);
+      const firstName = result.rows[0].first_name;
+      sendVerificationCode(email, newCode, firstName).catch(() => {});
+    } catch (dbErr) {
+      console.warn('DB unavailable on resend-code:', dbErr.message);
+    }
+
+    res.json({ message: 'Code sent.', demo_code: newCode });
+  } catch (err) {
+    console.error('Resend code error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
   }
 });
 
@@ -270,6 +332,29 @@ router.get('/me', auth, async (req, res) => {
   } catch (err) {
     console.error('Me error:', err);
     res.json({ user: req.user });
+  }
+});
+
+// Saves full profile from onboarding + marks onboarding_complete
+router.post('/profile', auth, async (req, res) => {
+  try {
+    const { program, year, has_car, housing, challenge, personality, interests, name, primary_intent } = req.body;
+    if (!req.user.id) return res.json({ message: 'Demo mode — profile saved locally.' });
+
+    await query(
+      `UPDATE users SET
+        program = $1, year = $2, has_car = $3, living = $4,
+        challenge = $5, personality = $6, interests = $7,
+        name = COALESCE($8, name), primary_intent = COALESCE($9, primary_intent),
+        onboarding_complete = true
+       WHERE id = $10`,
+      [program, year, has_car, housing || null, challenge || null, personality || null, interests || [], name || null, primary_intent || null, req.user.id]
+    ).catch(e => console.warn('Profile save warn:', e.message));
+
+    res.json({ message: 'Profile saved.' });
+  } catch (err) {
+    console.error('Profile error:', err);
+    res.status(500).json({ error: 'Something went wrong.' });
   }
 });
 

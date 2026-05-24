@@ -1,5 +1,7 @@
 /**
  * Injects the shared UNite navigation bar into any page that calls injectNav.
+ * Logged-out: shows Sign In link (left of Join UNite button)
+ * Logged-in:  shows profile dropdown, hides Sign In and Join UNite
  */
 function injectNav(activePage) {
   const navHTML = `
@@ -9,9 +11,9 @@ function injectNav(activePage) {
         <a href="/features/marketplace.html" class="${activePage === 'marketplace' ? 'active' : ''}">Marketplace</a>
         <a href="/features/course-compass.html" class="${activePage === 'compass' ? 'active' : ''}">Course Compass</a>
         <a href="/features/community.html" class="${activePage === 'community' ? 'active' : ''}">Community</a>
+        <a href="/features/onboarding.html" class="signin-link ${activePage === 'onboarding' ? 'active' : ''}" id="nav-signin-link">Sign In</a>
       </div>
-      <div class="nav-right-inner">
-        <div class="nav-user" id="nav-user-display"></div>
+      <div class="nav-right-inner" id="nav-right-inner">
         <a href="/features/onboarding.html" class="nav-cta" id="nav-cta-btn">Join UNite →</a>
       </div>
       <button class="hamburger" id="nav-ham" aria-label="Menu">
@@ -27,32 +29,206 @@ function injectNav(activePage) {
   `;
   document.body.insertAdjacentHTML('afterbegin', navHTML);
 
-  /**
-   * Shows student name in nav if they already completed onboarding.
-   */
-  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
-  // Prefer first_name extracted from email; fall back to whatever name we have
-  const greetingName = profile.first_name || (profile.name ? profile.name.split(' ')[0] : '');
-  if (greetingName) {
-    document.getElementById('nav-user-display').textContent = 'Hi, ' + greetingName + ' \uD83D\uDC4B';
-    document.getElementById('nav-cta-btn').style.display = 'none';
-  }
+  // Show profile dropdown for logged-in users, or keep Sign In / Join UNite for guests
+  updateNavForLoggedInUser();
 
-  /**
-   * Makes nav background go dark when user scrolls down the page.
-   */
+  // Darken nav on scroll
   const nav = document.getElementById('unite-nav');
   window.addEventListener('scroll', () => {
     nav.classList.toggle('scrolled', window.scrollY > 60);
   }, { passive: true });
 
-  /**
-   * Opens and closes the mobile hamburger menu.
-   */
+  // Mobile hamburger
   const ham = document.getElementById('nav-ham');
   const mob = document.getElementById('nav-mob-menu');
   ham.addEventListener('click', () => {
     ham.classList.toggle('open');
     mob.classList.toggle('open');
   });
+}
+
+/**
+ * Checks localStorage for a logged-in user and swaps nav to profile dropdown,
+ * or shows Sign In / Join UNite for guests.
+ */
+function updateNavForLoggedInUser() {
+  const token = localStorage.getItem('unite_token');
+  const user = JSON.parse(localStorage.getItem('unite_user') || '{}');
+  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+
+  if (!token) return; // guest — keep default nav
+
+  const firstName = profile.name || user.first_name || 'Student';
+  const program = profile.program || '';
+  const year = profile.year ? `Year ${profile.year}` : '';
+  const avatarLetter = (user.initials || firstName.charAt(0) || 'S').toUpperCase();
+
+  // Hide Sign In link and Join button
+  const signinLink = document.getElementById('nav-signin-link');
+  const ctaBtn = document.getElementById('nav-cta-btn');
+  if (signinLink) signinLink.style.display = 'none';
+  if (ctaBtn) ctaBtn.style.display = 'none';
+
+  const navRight = document.getElementById('nav-right-inner');
+  if (!navRight) return;
+
+  navRight.innerHTML = `
+    <div class="profile-menu-wrapper" id="profile-menu-wrapper">
+      <button class="profile-trigger" onclick="toggleProfileMenu(event)">
+        <div class="profile-avatar-small">${avatarLetter}</div>
+        <span class="profile-name">${firstName}</span>
+        <span class="profile-chevron">▾</span>
+      </button>
+      <div class="profile-dropdown" id="profile-dropdown" style="display:none;">
+        <div class="profile-dropdown-header">
+          <div class="profile-dropdown-avatar">${avatarLetter}</div>
+          <div class="profile-dropdown-info">
+            <strong>${user.display_name || firstName}</strong>
+            <span>${user.email || ''}</span>
+            ${program ? `<span class="profile-program-tag">${program}${year ? ` · ${year}` : ''}</span>` : ''}
+          </div>
+        </div>
+        <div class="profile-dropdown-divider"></div>
+        <a class="profile-dropdown-item" href="/features/course-compass.html">🧭 Course Compass</a>
+        <a class="profile-dropdown-item" href="/features/marketplace.html">🛒 Marketplace</a>
+        <a class="profile-dropdown-item" href="/features/community.html">🤝 Community</a>
+        <div class="profile-dropdown-divider"></div>
+        <button class="profile-dropdown-item" onclick="openProfileSettings()">⚙️ Edit Profile & Preferences</button>
+        <button class="profile-dropdown-item danger" onclick="signOut()">🚪 Sign Out</button>
+      </div>
+    </div>`;
+
+  // Close when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#profile-menu-wrapper')) {
+      const dd = document.getElementById('profile-dropdown');
+      if (dd) dd.style.display = 'none';
+    }
+  });
+}
+
+function toggleProfileMenu(e) {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById('profile-dropdown');
+  if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+function openProfileSettings() {
+  const dd = document.getElementById('profile-dropdown');
+  if (dd) dd.style.display = 'none';
+
+  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  const sel = (val, opt) => val === opt ? 'selected' : '';
+
+  const modal = document.createElement('div');
+  modal.className = 'profile-modal-overlay';
+  modal.innerHTML = `
+    <div class="profile-modal">
+      <div class="profile-modal-header">
+        <h2>Your Profile</h2>
+        <button onclick="this.closest('.profile-modal-overlay').remove()">✕</button>
+      </div>
+      <div class="profile-modal-body">
+        <div class="profile-field">
+          <label>Program</label>
+          <select id="edit-program">
+            <option value="Computer Science" ${sel(profile.program,'Computer Science')}>Computer Science</option>
+            <option value="Software Engineering" ${sel(profile.program,'Software Engineering')}>Software Engineering</option>
+            <option value="Electrical Engineering" ${sel(profile.program,'Electrical Engineering')}>Electrical Engineering</option>
+            <option value="Business" ${sel(profile.program,'Business')}>Business (Haskayne)</option>
+            <option value="Kinesiology" ${sel(profile.program,'Kinesiology')}>Kinesiology</option>
+            <option value="Psychology" ${sel(profile.program,'Psychology')}>Psychology</option>
+            <option value="Nursing" ${sel(profile.program,'Nursing')}>Nursing</option>
+            <option value="Biological Sciences" ${sel(profile.program,'Biological Sciences')}>Biological Sciences</option>
+          </select>
+        </div>
+        <div class="profile-field">
+          <label>Year</label>
+          <select id="edit-year">
+            ${['1','2','3','4','5+','Graduate'].map(y =>
+              `<option value="${y}" ${sel(profile.year,y)}>${y === 'Graduate' ? 'Graduate Student' : `Year ${y}`}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="profile-field">
+          <label>Do you have a car?</label>
+          <div class="toggle-group">
+            <button class="toggle-btn ${profile.has_car ? 'active' : ''}" onclick="setCarStatus(true, this)">Yes</button>
+            <button class="toggle-btn ${!profile.has_car ? 'active' : ''}" onclick="setCarStatus(false, this)">No</button>
+          </div>
+        </div>
+        <div class="profile-field">
+          <label>Housing</label>
+          <select id="edit-housing">
+            ${['On campus','Off campus','Commuter'].map(h =>
+              `<option value="${h}" ${sel(profile.housing,h)}>${h}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="profile-field">
+          <label>Interests</label>
+          <div class="interests-chips" id="edit-interests">
+            ${['Sports','Music','Gaming','Study Groups','Outdoors','Arts','Tech','Food','Other'].map(i =>
+              `<button class="interest-chip ${(profile.interests||[]).includes(i)?'active':''}" onclick="toggleInterest('${i}',this)">${i}</button>`
+            ).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="profile-modal-footer">
+        <button class="btn btn-secondary" onclick="this.closest('.profile-modal-overlay').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveProfileSettings()">Save Changes</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function saveProfileSettings() {
+  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  profile.program = document.getElementById('edit-program')?.value || profile.program;
+  profile.year = document.getElementById('edit-year')?.value || profile.year;
+  profile.housing = document.getElementById('edit-housing')?.value || profile.housing;
+  const activeInterests = [...document.querySelectorAll('.interest-chip.active')].map(b => b.textContent.trim());
+  if (activeInterests.length > 0) profile.interests = activeInterests;
+  localStorage.setItem('unite_profile', JSON.stringify(profile));
+
+  const token = localStorage.getItem('unite_token');
+  if (token) {
+    fetch('/api/auth/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(profile)
+    }).catch(() => {});
+  }
+
+  document.querySelector('.profile-modal-overlay')?.remove();
+
+  const toast = document.createElement('div');
+  toast.className = 'success-toast';
+  toast.textContent = '✅ Profile updated successfully';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+
+  // Refresh nav to show updated name
+  const nameEl = document.querySelector('.profile-name');
+  if (nameEl) nameEl.textContent = profile.name || profile.program || 'Student';
+}
+
+function setCarStatus(val, btn) {
+  btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  profile.has_car = val;
+  localStorage.setItem('unite_profile', JSON.stringify(profile));
+}
+
+function toggleInterest(interest, btn) {
+  btn.classList.toggle('active');
+}
+
+function signOut() {
+  localStorage.removeItem('unite_token');
+  localStorage.removeItem('unite_user');
+  localStorage.removeItem('unite_profile');
+  localStorage.removeItem('unite_user_id');
+  window.location.href = '/index.html';
 }

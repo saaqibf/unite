@@ -149,7 +149,22 @@ const OTHER_PROGRAMS = {
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 
+function checkOnboardingComplete() {
+  const token = localStorage.getItem('unite_token');
+  if (!token) {
+    window.location.href = '/features/onboarding.html';
+    return false;
+  }
+  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  if (!profile.program || !profile.year) {
+    window.location.href = '/features/onboarding.html?reason=incomplete';
+    return false;
+  }
+  return true;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  if (!checkOnboardingComplete()) return;
   loadProfileFromStorage();
   setupTranscriptUpload();
   loadRoadmap();
