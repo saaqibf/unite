@@ -118,23 +118,31 @@ function rowToListing(row) {
 
 async function getAllListings() {
   if (useDatabase()) {
-    const { rows } = await getPool().query('SELECT * FROM marketplace_listings ORDER BY created_at DESC');
-    return rows.map(rowToListing);
+    try {
+      const { rows } = await getPool().query('SELECT * FROM marketplace_listings ORDER BY created_at DESC');
+      return rows.map(rowToListing);
+    } catch (e) {
+      console.warn('getAllListings DB error, using memory:', e.message);
+    }
   }
   return memoryListings;
 }
 
 async function insertListing(data) {
   if (useDatabase()) {
-    const { rows } = await getPool().query(
-      `INSERT INTO marketplace_listings
-        (seller_id, seller_name, title, description, price, condition, category, meetup_spot, meetup_other, photos, course_tags, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'active') RETURNING *`,
-      [data.sellerId, data.sellerName, data.title, data.description, data.price,
-       data.condition, data.category, data.meetupSpot, data.meetupOther || null,
-       data.photos || [], data.courseTags || []]
-    );
-    return rowToListing(rows[0]);
+    try {
+      const { rows } = await getPool().query(
+        `INSERT INTO marketplace_listings
+          (seller_id, seller_name, title, description, price, condition, category, meetup_spot, meetup_other, photos, course_tags, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'active') RETURNING *`,
+        [data.sellerId, data.sellerName, data.title, data.description, data.price,
+         data.condition, data.category, data.meetupSpot, data.meetupOther || null,
+         data.photos || [], data.courseTags || []]
+      );
+      return rowToListing(rows[0]);
+    } catch (e) {
+      console.warn('insertListing DB error, using memory:', e.message);
+    }
   }
   const item = { id: `mem-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...data };
   memoryListings.unshift(item);
@@ -143,32 +151,41 @@ async function insertListing(data) {
 
 async function markListingSold(id) {
   if (useDatabase()) {
-    await getPool().query(`UPDATE marketplace_listings SET status = 'sold' WHERE id = $1`, [id]);
-    return;
+    try {
+      await getPool().query(`UPDATE marketplace_listings SET status = 'sold' WHERE id = $1`, [id]);
+      return;
+    } catch (e) {
+      console.warn('markListingSold DB error, using memory:', e.message);
+    }
   }
   memoryListings = memoryListings.map(l => String(l.id) === String(id) ? { ...l, status: 'sold' } : l);
 }
 
 function seedMemoryIfEmpty(seedFn) {
-  if (!useDatabase() && memoryListings.length === 0) {
+  // Always seed memory as a fallback — used when DB is unavailable or for in-memory mode
+  if (memoryListings.length === 0) {
     memoryListings = seedFn();
   }
 }
 
 async function getOrCreateThread(listingId, buyer, sellerId, prefilled) {
   if (useDatabase()) {
-    const existing = await getPool().query(
-      'SELECT * FROM marketplace_threads WHERE listing_id = $1 AND buyer_id = $2',
-      [listingId, buyer.id]
-    );
-    if (existing.rows[0]) return formatThread(existing.rows[0]);
-    const messages = [{ from: buyer.id, text: prefilled, at: new Date().toISOString() }];
-    const { rows } = await getPool().query(
-      `INSERT INTO marketplace_threads (listing_id, buyer_id, buyer_name, seller_id, messages)
-       VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [listingId, buyer.id, buyer.name, sellerId, JSON.stringify(messages)]
-    );
-    return formatThread(rows[0]);
+    try {
+      const existing = await getPool().query(
+        'SELECT * FROM marketplace_threads WHERE listing_id = $1 AND buyer_id = $2',
+        [listingId, buyer.id]
+      );
+      if (existing.rows[0]) return formatThread(existing.rows[0]);
+      const messages = [{ from: buyer.id, text: prefilled, at: new Date().toISOString() }];
+      const { rows } = await getPool().query(
+        `INSERT INTO marketplace_threads (listing_id, buyer_id, buyer_name, seller_id, messages)
+         VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+        [listingId, buyer.id, buyer.name, sellerId, JSON.stringify(messages)]
+      );
+      return formatThread(rows[0]);
+    } catch (e) {
+      console.warn('getOrCreateThread DB error, using memory:', e.message);
+    }
   }
   let thread = memoryThreads.find(t => String(t.listingId) === String(listingId) && String(t.buyerId) === String(buyer.id));
   if (!thread) {
@@ -185,12 +202,16 @@ async function getOrCreateThread(listingId, buyer, sellerId, prefilled) {
 async function appendThreadMessage(threadId, fromId, text) {
   const msg = { from: fromId, text, at: new Date().toISOString() };
   if (useDatabase()) {
-    const { rows } = await getPool().query('SELECT * FROM marketplace_threads WHERE id = $1', [threadId]);
-    if (!rows[0]) return null;
-    const messages = rows[0].messages || [];
-    messages.push(msg);
-    await getPool().query('UPDATE marketplace_threads SET messages = $1 WHERE id = $2', [JSON.stringify(messages), threadId]);
-    return formatThread({ ...rows[0], messages });
+    try {
+      const { rows } = await getPool().query('SELECT * FROM marketplace_threads WHERE id = $1', [threadId]);
+      if (!rows[0]) return null;
+      const messages = rows[0].messages || [];
+      messages.push(msg);
+      await getPool().query('UPDATE marketplace_threads SET messages = $1 WHERE id = $2', [JSON.stringify(messages), threadId]);
+      return formatThread({ ...rows[0], messages });
+    } catch (e) {
+      console.warn('appendThreadMessage DB error, using memory:', e.message);
+    }
   }
   const thread = memoryThreads.find(t => String(t.id) === String(threadId));
   if (!thread) return null;
