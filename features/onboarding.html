@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Join UNite — UCalgary Student Platform</title>
+  <link rel="icon" href="/css/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/unite-design-system.css" />
+  <link rel="stylesheet" href="/css/onboarding.css" />
+</head>
+<body>
+
+  <div class="ob-shell" id="ob-shell">
+
+    <!-- Progress bar -->
+    <div class="ob-progress" id="ob-progress" style="display:none;">
+      <div class="ob-progress__bar" id="ob-progress-bar"></div>
+    </div>
+
+    <!-- ── SCREEN 1: Sign Up ─────────────────────────────────── -->
+    <div class="ob-screen" id="screen-signup">
+      <div class="ob-card">
+        <div class="ob-logo">
+          <img src="/css/logo.svg" alt="UNite" height="36" />
+        </div>
+        <h1 class="ob-heading text-display">Join UNite</h1>
+        <p class="ob-sub text-muted">The all-in-one platform for UCalgary students.<br>UCalgary email required.</p>
+
+        <div class="input-group">
+          <label class="input-label" for="signup-email">UCalgary Email</label>
+          <div class="ob-email-wrap">
+            <input class="input-field" id="signup-email" type="email"
+              placeholder="yourname@ucalgary.ca" autocomplete="email" />
+            <span class="ob-email-badge" id="email-badge"></span>
+          </div>
+          <p class="ob-field-hint" id="email-hint"></p>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="signup-name">First Name</label>
+          <input class="input-field" id="signup-name" type="text" placeholder="Sarah" autocomplete="given-name" />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="signup-password">Password</label>
+          <input class="input-field" id="signup-password" type="password" placeholder="At least 8 characters" autocomplete="new-password" />
+        </div>
+
+        <p class="ob-error" id="signup-error"></p>
+
+        <button class="btn-primary btn-block ob-cta" id="signup-btn">
+          Join UNite →
+        </button>
+
+        <p class="ob-login-link text-muted">
+          Already have an account?
+          <a href="#" id="show-login-btn" class="text-primary">Log in</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 1b: Log In ──────────────────────────────────── -->
+    <div class="ob-screen" id="screen-login" style="display:none;">
+      <div class="ob-card">
+        <div class="ob-logo">
+          <img src="/css/logo.svg" alt="UNite" height="36" />
+        </div>
+        <h1 class="ob-heading text-display">Welcome Back</h1>
+        <p class="ob-sub text-muted">Log in with your UCalgary email.</p>
+
+        <div class="input-group">
+          <label class="input-label" for="login-email">UCalgary Email</label>
+          <input class="input-field" id="login-email" type="email" placeholder="yourname@ucalgary.ca" />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="login-password">Password</label>
+          <input class="input-field" id="login-password" type="password" placeholder="Password" />
+        </div>
+
+        <p class="ob-error" id="login-error"></p>
+
+        <button class="btn-primary btn-block ob-cta" id="login-btn">Log In →</button>
+
+        <p class="ob-login-link text-muted">
+          New to UNite?
+          <a href="#" id="show-signup-btn" class="text-primary">Sign up</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 2: Verify Email ─────────────────────────────── -->
+    <div class="ob-screen" id="screen-verify" style="display:none;">
+      <div class="ob-card ob-card--center">
+        <div class="ob-icon-circle">📬</div>
+        <h1 class="ob-heading text-display">Check Your Inbox</h1>
+        <p class="ob-sub text-muted">We sent a verification link to<br>
+          <strong id="verify-email-display"></strong>
+        </p>
+        <p class="text-muted" style="font-size:0.875rem;margin-top:0.5rem;">
+          Click the link in the email to verify your UCalgary account.
+        </p>
+        <button class="btn-secondary ob-cta" id="skip-verify-btn">
+          Skip for demo →
+        </button>
+        <p class="ob-login-link text-muted" style="margin-top:1rem;">
+          Didn't get it? <a href="#" id="resend-btn" class="text-primary">Resend email</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 3–10: The 8 Questions ──────────────────────── -->
+    <div class="ob-screen" id="screen-questions" style="display:none;">
+      <div class="ob-card">
+        <p class="ob-step-label" id="q-step-label">Question 1 of 8</p>
+        <h2 class="ob-question text-display" id="q-text"></h2>
+        <div class="ob-choices" id="q-choices"></div>
+        <p class="ob-error" id="q-error"></p>
+        <div class="ob-q-nav">
+          <button class="btn-secondary btn-sm" id="q-back-btn">← Back</button>
+          <button class="btn-primary" id="q-next-btn">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 4: Welcome Dashboard ───────────────────────── -->
+    <div class="ob-screen" id="screen-welcome" style="display:none;">
+      <div class="ob-card ob-card--center">
+        <div class="ob-welcome-avatar" id="welcome-avatar">S</div>
+        <h1 class="ob-heading text-display">Welcome to UNite,<br><span id="welcome-name" class="text-primary">Sarah</span>!</h1>
+        <p class="ob-sub text-muted" id="welcome-sub">Here's what we found for you.</p>
+
+        <div class="ob-welcome-cards" id="welcome-cards"></div>
+
+        <button class="btn-primary btn-block ob-cta" id="go-dashboard-btn" style="margin-top:1.5rem;">
+          Let's Go →
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="/js/onboarding.js"></script>
+</body>
+</html>
