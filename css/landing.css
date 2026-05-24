@@ -1,0 +1,245 @@
+/**
+ * Landing page styles — cinematic hero for UNite
+ * Extends unite-design-system.css
+ */
+
+/* ─── Hero Layout ────────────────────────────────────────────────── */
+
+.landing {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-black);
+  color: var(--color-white);
+  overflow-x: hidden;
+  position: relative;
+}
+
+.landing__hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-xl) var(--space-md) var(--space-2xl);
+  position: relative;
+  z-index: 2;
+}
+
+/* ─── Skyline Silhouette ─────────────────────────────────────────── */
+
+.landing__skyline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 35%;
+  min-height: 180px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.landing__skyline svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── Logo ───────────────────────────────────────────────────────── */
+
+.landing__logo {
+  margin-bottom: var(--space-xl);
+  opacity: 0;
+  animation: fade-in-down 0.8s ease forwards;
+}
+
+.landing__logo img {
+  height: 56px;
+  width: auto;
+  filter: brightness(0) invert(1);
+}
+
+.landing__logo img .logo-n {
+  filter: none;
+}
+
+/* Inline SVG wordmark for dark bg */
+.landing__wordmark {
+  font-family: var(--font-display);
+  font-size: 3.5rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin-bottom: var(--space-xs);
+}
+
+.landing__wordmark-n {
+  color: var(--color-primary);
+}
+
+.landing__wordmark-rest {
+  color: var(--color-white);
+}
+
+.landing__tagline {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* ─── Hero Copy ──────────────────────────────────────────────────── */
+
+.landing__headline {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 8vw, 4rem);
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  max-width: 18ch;
+  margin-bottom: var(--space-md);
+  opacity: 0;
+  animation: fade-in-up 0.9s ease 0.3s forwards;
+}
+
+.landing__subtext {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 32ch;
+  margin-bottom: var(--space-2xl);
+  opacity: 0;
+  animation: fade-in-up 0.9s ease 0.55s forwards;
+}
+
+/* ─── Entry Cards ────────────────────────────────────────────────── */
+
+.landing__cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: var(--space-2xl);
+}
+
+.landing__card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base),
+    background-color var(--transition-base);
+  opacity: 0;
+  animation: fade-in-up 0.7s ease forwards;
+}
+
+.landing__card:nth-child(1) { animation-delay: 0.75s; }
+.landing__card:nth-child(2) { animation-delay: 0.95s; }
+.landing__card:nth-child(3) { animation-delay: 1.15s; }
+
+.landing__card:hover {
+  transform: translateY(-6px);
+  border-color: var(--color-primary);
+  background: rgba(204, 0, 51, 0.12);
+  box-shadow: 0 0 32px rgba(204, 0, 51, 0.35),
+    0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.landing__card-icon {
+  font-size: 1.75rem;
+  margin-bottom: var(--space-sm);
+  display: block;
+}
+
+.landing__card-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: 0.03em;
+  color: var(--color-white);
+  margin-bottom: var(--space-xs);
+}
+
+.landing__card-desc {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.45;
+}
+
+/* ─── Footer strip ───────────────────────────────────────────────── */
+
+.landing__footer {
+  position: relative;
+  z-index: 2;
+  padding: var(--space-lg) var(--space-md);
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  opacity: 0;
+  animation: fade-in 1s ease 1.4s forwards;
+}
+
+.landing__footer-dot {
+  color: var(--color-primary);
+  margin: 0 0.35rem;
+}
+
+/* ─── Animations ─────────────────────────────────────────────────── */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Tablet ─────────────────────────────────────────────────────── */
+
+@media (min-width: 768px) {
+  .landing__cards {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 720px;
+  }
+
+  .landing__wordmark {
+    font-size: 4.5rem;
+  }
+
+  .landing__subtext {
+    font-size: 1.125rem;
+  }
+}
+
+/* ─── Desktop ────────────────────────────────────────────────────── */
+
+@media (min-width: 1024px) {
+  .landing__cards {
+    max-width: 900px;
+    gap: var(--space-lg);
+  }
+
+  .landing__card {
+    padding: var(--space-xl);
+  }
+}
