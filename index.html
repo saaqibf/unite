@@ -3,55 +3,1323 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UNite — University is better together</title>
-  <meta name="description" content="The all-in-one platform for UCalgary students. Settle in, find your way, meet people.">
+  <title>UNite — University is Better Together</title>
+  <!-- SEO -->
+  <meta name="description" content="UNite is the all-in-one platform for University of Calgary students. Plan your degree, buy and sell on campus, find events, and connect with verified UCalgary students.">
+  <meta name="keywords" content="UCalgary, University of Calgary, student platform, course planning, campus marketplace, student community">
+  <link rel="canonical" href="https://unite.up.railway.app/">
+
+  <!-- Open Graph (for sharing) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="UNite — University is Better Together">
+  <meta property="og:description" content="The all-in-one platform for University of Calgary students. Plan your degree, find your people, and make the most of UCalgary.">
+  <meta property="og:url" content="https://unite.up.railway.app/">
+  <meta property="og:site_name" content="UNite">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="UNite — University is Better Together">
+  <meta name="twitter:description" content="The all-in-one platform for University of Calgary students.">
+
+  <!-- Theme color (browser tab color on mobile) -->
+  <meta name="theme-color" content="#CC0033">
+
+  <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/css/favicon.svg">
-  <link rel="stylesheet" href="/css/unite-design-system.css">
-  <link rel="stylesheet" href="/css/landing.css">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:      #CC0033;
+      --red-dark: #A3002A;
+      --gold:     #FFCD00;
+      --black:    #0A0A0A;
+      --white:    #FFFFFF;
+      --muted:    #6B6B6B;
+      --surface:  #F4F4F4;
+      --panel:    #111111;
+      --fd: 'Bebas Neue', sans-serif;
+      --fb: 'DM Sans', sans-serif;
+      --fm: 'JetBrains Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--fb);
+      background: var(--black);
+      color: var(--white);
+      overflow-x: hidden;
+    }
+
+    /* ─── NOISE OVERLAY ─── */
+    #grain-svg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.035;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 60px;
+      transition: background 0.4s, padding 0.4s, backdrop-filter 0.4s;
+    }
+    nav.scrolled {
+      background: rgba(10,10,10,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 18px 60px;
+    }
+
+    .logo {
+      font-family: var(--fd);
+      font-size: 38px;
+      letter-spacing: 3px;
+      color: var(--white);
+      text-decoration: none;
+      line-height: 1;
+    }
+    .logo .n { color: var(--red); }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .nav-right .signin {
+      font-family: var(--fb);
+      font-size: 15px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.65);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-right .signin:hover { color: #fff; }
+
+    .nav-cta {
+      font-family: var(--fb);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--white);
+      background: var(--red);
+      text-decoration: none;
+      padding: 11px 26px;
+      border-radius: 999px;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .nav-cta:hover { background: var(--red-dark); transform: translateY(-1px); }
+
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .hamburger span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: #fff;
+      border-radius: 2px;
+      transition: all 0.3s;
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: rgba(10,10,10,0.97);
+      backdrop-filter: blur(24px);
+      padding: 100px 32px 40px;
+      flex-direction: column;
+      gap: 0;
+      z-index: 499;
+      transform: translateY(-100%);
+      transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
+    }
+    .mobile-menu.open { transform: translateY(0); }
+    .mobile-menu a {
+      font-family: var(--fd);
+      font-size: 40px;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: block;
+      transition: color 0.2s;
+    }
+    .mobile-menu a:last-child { border-bottom: none; color: var(--red); }
+    .mobile-menu a:hover { color: var(--white); }
+
+    /* ─── HERO ─── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      background: var(--black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .hero-slash {
+      position: absolute;
+      top: -60%; bottom: -60%;
+      left: 15%; right: -40%;
+      background: var(--red);
+      opacity: 0;
+      transform: skewY(-8deg) scaleY(0.95);
+      animation: slashIn 0.9s cubic-bezier(0.22,1,0.36,1) 0.1s forwards;
+    }
+    @keyframes slashIn {
+      to { opacity: 0.12; transform: skewY(-8deg) scaleY(1); }
+    }
+
+    .hero-skyline {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 180px;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 130px 40px 100px;
+      max-width: 980px;
+      width: 100%;
+    }
+
+    .hero-label {
+      font-family: var(--fm);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 3.5px;
+      color: var(--red);
+      text-transform: uppercase;
+      margin-bottom: 36px;
+      opacity: 0;
+      transform: translateX(-16px);
+      animation: labelIn 0.6s ease 0.25s forwards;
+    }
+    @keyframes labelIn {
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .hero-headline {
+      font-family: var(--fd);
+      font-size: clamp(76px, 13vw, 148px);
+      line-height: 0.91;
+      letter-spacing: 3px;
+      color: var(--white);
+      margin-bottom: 36px;
+      overflow: visible;
+    }
+
+    .word-wrap {
+      display: inline-block;
+      overflow: hidden;
+      vertical-align: bottom;
+    }
+    .word-inner {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(110%);
+      animation: wordUp 0.65s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+
+    @keyframes wordUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .together-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .together-wrap::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      bottom: clamp(6px, 1vw, 14px);
+      height: clamp(4px, 0.7vw, 9px);
+      background: var(--red);
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: underlineIn 0.5s ease 1s forwards;
+    }
+    @keyframes underlineIn {
+      to { transform: scaleX(1); }
+    }
+
+    .hero-sub {
+      font-family: var(--fb);
+      font-size: 19px;
+      line-height: 1.65;
+      color: rgba(255,255,255,0.68);
+      max-width: 540px;
+      margin: 0 auto 44px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.95s forwards;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 36px;
+      opacity: 0;
+      transform: scale(0.94);
+      animation: btnsIn 0.5s ease 1.15s forwards;
+    }
+    @keyframes btnsIn {
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .btn-primary {
+      font-family: var(--fb);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--white);
+      background: var(--red);
+      text-decoration: none;
+      padding: 17px 34px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary:hover {
+      background: var(--red-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(204,0,51,0.4);
+    }
+
+    .btn-ghost {
+      font-family: var(--fb);
+      font-size: 16px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.8);
+      background: transparent;
+      text-decoration: none;
+      padding: 17px 34px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: border-color 0.2s, color 0.2s, transform 0.2s;
+    }
+    .btn-ghost:hover {
+      border-color: rgba(255,255,255,0.6);
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    .hero-trust {
+      font-family: var(--fm);
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      color: rgba(255,255,255,0.35);
+      opacity: 0;
+      animation: fadeUp 0.5s ease 1.35s forwards;
+    }
+
+    /* ─── SCROLL REVEAL ─── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.in { opacity: 1; transform: translateY(0); }
+
+    /* ─── FEATURE STRIPS ─── */
+    .feature-strip {
+      display: flex;
+      min-height: 540px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fp-text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px 72px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fp-vis {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.5s ease;
+    }
+
+    .feature-strip:hover .fp-vis { transform: scale(1.03); }
+
+    .w55 { flex: 0 0 55%; }
+    .w45 { flex: 0 0 45%; }
+
+    .ghost-num {
+      font-family: var(--fd);
+      font-size: 180px;
+      line-height: 1;
+      letter-spacing: -6px;
+      position: absolute;
+      top: 12px; left: 32px;
+      opacity: 0.06;
+      pointer-events: none;
+      color: var(--white);
+      transition: opacity 0.4s;
+    }
+    .feature-strip:hover .ghost-num { opacity: 0.11; }
+
+    .strip-label {
+      font-family: var(--fm);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 3.5px;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .strip-heading {
+      font-family: var(--fd);
+      font-size: clamp(60px, 6vw, 88px);
+      line-height: 0.93;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .strip-body {
+      font-family: var(--fb);
+      font-size: 17px;
+      line-height: 1.72;
+      color: rgba(255,255,255,0.62);
+      max-width: 400px;
+      margin-bottom: 36px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-strip {
+      font-family: var(--fb);
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 30px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      position: relative;
+      z-index: 1;
+      transition: transform 0.2s, opacity 0.2s, box-shadow 0.2s;
+    }
+    .btn-strip:hover { transform: translateY(-2px); }
+    .btn-red-solid  { background: var(--red);  color: var(--white); }
+    .btn-red-solid:hover  { box-shadow: 0 6px 24px rgba(204,0,51,0.5); }
+    .btn-gold-solid { background: var(--gold); color: var(--black); }
+    .btn-gold-solid:hover { box-shadow: 0 6px 24px rgba(255,205,0,0.4); }
+    .btn-outline-wh { background: transparent; color: var(--white); border: 1.5px solid rgba(255,255,255,0.45); }
+    .btn-outline-wh:hover { border-color: rgba(255,255,255,0.8); }
+
+    /* ── Strip 1 — Marketplace ── */
+    .s1-text { background: var(--panel); }
+    .s1-text .strip-label { color: var(--red); }
+    .s1-text .strip-heading { color: var(--white); }
+    .s1-vis  { background: var(--red); }
+
+    /* ── Strip 2 — Course Compass ── */
+    .s2-vis  { background: var(--gold); }
+    .s2-text { background: var(--panel); }
+    .s2-text .strip-label { color: var(--gold); }
+    .s2-text .strip-heading { color: var(--white); }
+
+    /* ── Strip 3 — Community ── */
+    .s3-text { background: var(--panel); }
+    .s3-text .strip-label { color: rgba(255,255,255,0.55); }
+    .s3-text .strip-heading { color: var(--white); }
+    .s3-vis  { background: linear-gradient(145deg, #CC0033 0%, #500011 55%, #0A0A0A 100%); }
+
+    /* ─── MARKETPLACE MOCK ─── */
+    .market-mock {
+      position: relative;
+      z-index: 2;
+    }
+
+    .m-card-behind {
+      position: absolute;
+      width: 210px; height: 230px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 18px;
+      top: 16px; right: -24px;
+      transform: rotate(5deg);
+    }
+
+    .m-card {
+      background: #fff;
+      border-radius: 18px;
+      width: 220px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+      overflow: hidden;
+      position: relative;
+      transition: transform 0.35s ease, box-shadow 0.35s ease;
+    }
+    .m-card:hover { transform: translateY(-8px) rotate(-1.5deg); box-shadow: 0 36px 90px rgba(0,0,0,0.55); }
+
+    .m-card-photo {
+      width: 100%; height: 118px;
+      background: #e4e4e4;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--fm); font-size: 10px; color: #aaa; letter-spacing: 1px;
+    }
+
+    .m-card-body { padding: 16px; }
+
+    .m-card-title {
+      font-family: var(--fb); font-weight: 700; font-size: 14px;
+      color: #111; margin-bottom: 4px;
+    }
+
+    .m-card-price {
+      font-family: var(--fd); font-size: 28px; color: var(--red);
+      margin-bottom: 10px; letter-spacing: 1px;
+    }
+
+    .m-badges {
+      display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap;
+    }
+
+    .m-badge {
+      font-family: var(--fm); font-size: 10px; font-weight: 500;
+      padding: 3px 9px; border-radius: 999px; letter-spacing: 0.4px;
+    }
+    .mb-green { background: #e8f5e9; color: #2e7d32; }
+    .mb-blue  { background: #e3f2fd; color: #1565c0; }
+
+    .m-card-btn {
+      width: 100%; font-family: var(--fb); font-weight: 700; font-size: 13px;
+      color: #fff; background: var(--red); border: none; border-radius: 10px;
+      padding: 10px; cursor: pointer; text-align: center;
+    }
+
+    /* ─── PREREQ TREE ─── */
+    .prereq-tree {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 60px;
+    }
+
+    .p-row { display: flex; align-items: center; }
+
+    .p-node {
+      width: 82px; height: 82px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--fm); font-size: 11px; font-weight: 500;
+      text-align: center; line-height: 1.35;
+      position: relative; z-index: 1;
+    }
+
+    .p-node-dark    { background: var(--black); color: rgba(255,255,255,0.88); }
+    .p-node-active  { background: var(--red);   color: #fff; box-shadow: 0 0 0 5px rgba(204,0,51,0.28); }
+    .p-node-future  { background: var(--black); color: rgba(255,255,255,0.35); border: 2px dashed rgba(0,0,0,0.18); }
+
+    .p-line {
+      width: 2px; height: 34px;
+      background: rgba(0,0,0,0.18);
+      margin: 0 auto;
+    }
+
+    /* ─── CHAT MOCK ─── */
+    .chat-mock {
+      display: flex; flex-direction: column;
+      gap: 18px; padding: 40px 36px;
+      width: 100%; max-width: 360px;
+    }
+
+    .chat-row {
+      display: flex; gap: 10px; align-items: flex-end;
+    }
+    .chat-row.right { flex-direction: row-reverse; }
+
+    .chat-ava {
+      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--fb); font-size: 13px; font-weight: 700; color: #fff;
+    }
+    .ca1 { background: linear-gradient(135deg,#a8003f,#e8004a); }
+    .ca2 { background: linear-gradient(135deg,#1a2040,#3a5298); }
+    .ca3 { background: linear-gradient(135deg,#1a4535,#2d9c6f); }
+    .ca4 { background: linear-gradient(135deg,#333,#666); }
+
+    .chat-bubble-wrap {}
+
+    .chat-prog {
+      font-family: var(--fm); font-size: 10px; letter-spacing: 1px;
+      color: rgba(255,255,255,0.5); margin-bottom: 5px;
+    }
+    .chat-row.right .chat-prog { text-align: right; }
+
+    .chat-msg {
+      background: rgba(255,255,255,0.13);
+      backdrop-filter: blur(12px);
+      border-radius: 14px;
+      padding: 11px 15px;
+      font-family: var(--fb); font-size: 14px; line-height: 1.5;
+      color: rgba(255,255,255,0.9);
+      max-width: 220px;
+      animation: chatFloat 5s ease-in-out infinite;
+    }
+    .chat-row.right .chat-msg { background: rgba(255,255,255,0.18); }
+    .chat-row:nth-child(2) .chat-msg { animation-delay: 0.8s; }
+    .chat-row:nth-child(3) .chat-msg { animation-delay: 1.6s; }
+    .chat-row:nth-child(4) .chat-msg { animation-delay: 2.4s; }
+
+    @keyframes chatFloat {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    /* ─── STATS BAR ─── */
+    .stats-bar {
+      background: var(--black);
+      padding: 64px 0;
+      border-top:    1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .stats-grid {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(4,1fr);
+      padding: 0 48px;
+    }
+
+    .stat {
+      text-align: center; padding: 20px;
+      border-right: 1px solid rgba(255,255,255,0.1);
+    }
+    .stat:last-child { border-right: none; }
+
+    .stat-num {
+      font-family: var(--fd);
+      font-size: 76px; line-height: 1;
+      color: var(--gold); letter-spacing: 2px;
+      margin-bottom: 10px;
+    }
+
+    .stat-lbl {
+      font-family: var(--fb); font-size: 13px;
+      color: rgba(255,255,255,0.48); letter-spacing: 0.3px;
+    }
+
+    /* ─── TESTIMONIALS ─── */
+    .testimonials {
+      background: var(--white);
+      padding: 110px 0;
+    }
+
+    .t-inner {
+      max-width: 1100px; margin: 0 auto;
+      padding: 0 48px;
+    }
+
+    .t-header { text-align: center; margin-bottom: 68px; }
+
+    .t-tag {
+      font-family: var(--fm); font-size: 11px; font-weight: 500;
+      letter-spacing: 3.5px; text-transform: uppercase;
+      color: var(--red); margin-bottom: 18px; display: block;
+    }
+
+    .t-heading {
+      font-family: var(--fd);
+      font-size: clamp(52px, 6vw, 80px);
+      line-height: 0.93; letter-spacing: 2px;
+      color: var(--black);
+    }
+
+    .t-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 24px;
+    }
+
+    .t-card {
+      background: #fff; border-radius: 18px;
+      border-left: 4px solid var(--gold);
+      padding: 36px 32px;
+      box-shadow: 0 4px 28px rgba(0,0,0,0.07);
+      transition: transform 0.32s ease, box-shadow 0.32s ease;
+    }
+    .t-card:hover { transform: translateY(-7px); box-shadow: 0 20px 56px rgba(0,0,0,0.13); }
+
+    .t-quote {
+      font-family: var(--fb); font-size: 16px; font-style: italic;
+      line-height: 1.72; color: #333; margin-bottom: 28px;
+    }
+
+    .t-foot {
+      display: flex; align-items: center; gap: 14px;
+    }
+
+    .t-ava {
+      width: 46px; height: 46px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--fb); font-size: 15px; font-weight: 700;
+      color: #fff; flex-shrink: 0;
+    }
+    .ta1 { background: linear-gradient(135deg,#CC0033,#ff6b6b); }
+    .ta2 { background: linear-gradient(135deg,#1a2040,#4a5480); }
+    .ta3 { background: linear-gradient(135deg,#1a4535,#52b788); }
+
+    .t-name {
+      font-family: var(--fb); font-weight: 700; font-size: 15px;
+      color: var(--black); margin-bottom: 5px;
+    }
+
+    .t-prog {
+      font-family: var(--fm); font-size: 11px; font-weight: 500;
+      color: var(--black); background: var(--gold);
+      padding: 3px 11px; border-radius: 999px; letter-spacing: 0.4px;
+      display: inline-block;
+    }
+
+    /* ─── CTA BANNER ─── */
+    .cta-section {
+      background: var(--red);
+      padding: 130px 0 90px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-grain {
+      position: absolute; inset: 0;
+      pointer-events: none; opacity: 0.04;
+    }
+
+    .cta-skyline {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+    }
+
+    .cta-inner {
+      position: relative; z-index: 1;
+      max-width: 860px; margin: 0 auto;
+      padding: 0 40px;
+    }
+
+    .cta-heading {
+      font-family: var(--fd);
+      font-size: clamp(72px, 13vw, 156px);
+      line-height: 0.88; letter-spacing: 4px;
+      color: var(--white); margin-bottom: 28px;
+    }
+
+    .cta-sub {
+      font-family: var(--fb); font-size: 19px;
+      color: rgba(255,255,255,0.84); margin-bottom: 48px; line-height: 1.6;
+    }
+
+    .btn-cta {
+      font-family: var(--fb); font-size: 18px; font-weight: 700;
+      color: var(--black); background: var(--white);
+      text-decoration: none; padding: 22px 52px;
+      border-radius: 999px; border: none; cursor: pointer;
+      display: inline-block;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-bottom: 20px;
+    }
+    .btn-cta:hover { transform: translateY(-3px); box-shadow: 0 14px 48px rgba(0,0,0,0.24); }
+
+    .cta-fine {
+      font-family: var(--fm); font-size: 11px; letter-spacing: 2px;
+      color: rgba(255,255,255,0.55); display: block; margin-top: 4px;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: var(--black);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding: 84px 0 44px;
+    }
+
+    .f-inner { max-width: 1100px; margin: 0 auto; padding: 0 48px; }
+
+    .f-top {
+      display: grid;
+      grid-template-columns: 1.6fr repeat(4,1fr);
+      gap: 48px; margin-bottom: 64px;
+      align-items: start;
+    }
+
+    .f-logo { font-family: var(--fd); font-size: 44px; letter-spacing: 3px; color: #fff; text-decoration: none; display: block; margin-bottom: 12px; }
+    .f-logo .n { color: var(--red); }
+
+    .f-tagline { font-family: var(--fb); font-size: 14px; color: rgba(255,255,255,0.38); }
+
+    .f-col-title {
+      font-family: var(--fm); font-size: 10px; font-weight: 500;
+      letter-spacing: 2.5px; text-transform: uppercase;
+      color: rgba(255,255,255,0.28); margin-bottom: 22px;
+    }
+
+    .f-col ul { list-style: none; display: flex; flex-direction: column; gap: 13px; }
+    .f-col ul li a {
+      font-family: var(--fb); font-size: 14px;
+      color: rgba(255,255,255,0.48); text-decoration: none;
+      transition: color 0.2s;
+    }
+    .f-col ul li a:hover { color: #fff; }
+
+    .f-bottom {
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding-top: 28px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .f-copy { font-family: var(--fb); font-size: 13px; color: rgba(255,255,255,0.28); }
+    .f-dinos { font-family: var(--fm); font-size: 12px; color: rgba(255,255,255,0.28); }
+
+    /* ─── MOBILE ─── */
+    @media (max-width: 800px) {
+      nav { padding: 20px; }
+      nav.scrolled { padding: 14px 20px; }
+      .nav-right { display: none; }
+      .hamburger { display: flex; }
+
+      .hero-content { padding: 100px 20px 90px; }
+      .hero-headline { font-size: clamp(54px, 14vw, 96px); }
+      .hero-sub { font-size: 16px; }
+      .hero-buttons { flex-direction: column; align-items: stretch; }
+      .hero-buttons a { justify-content: center; }
+
+      .feature-strip { flex-direction: column; min-height: auto; }
+      .fp-text { padding: 52px 28px; }
+      .w55, .w45 { flex: none; width: 100%; }
+      .fp-vis { min-height: 320px; }
+
+      .strip-2 { flex-direction: column-reverse; }
+
+      .ghost-num { font-size: 100px; }
+
+      .stats-grid { grid-template-columns: repeat(2,1fr); padding: 0 24px; }
+      .stat { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+      .stat:nth-child(odd) { border-right: 1px solid rgba(255,255,255,0.1); }
+      .stat:nth-child(3), .stat:nth-child(4) { border-bottom: none; }
+
+      .t-grid { grid-template-columns: 1fr; }
+      .t-inner { padding: 0 20px; }
+      .testimonials { padding: 70px 0; }
+
+      .cta-section { padding: 90px 0 70px; }
+      .cta-inner { padding: 0 20px; }
+      .btn-cta { width: 100%; padding: 20px; }
+
+      .f-top { grid-template-columns: 1fr 1fr; gap: 32px; }
+      .f-logo-wrap { grid-column: 1 / -1; }
+      .f-inner { padding: 0 20px; }
+      .f-bottom { flex-direction: column; gap: 10px; text-align: center; }
+    }
+  </style>
 </head>
 <body>
-  <div class="landing">
-    <div class="landing__skyline" aria-hidden="true">
-      <svg viewBox="0 0 1440 320" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
-        <path fill="#141414" d="M0,320 L0,220 L40,220 L40,180 L80,180 L80,200 L120,200 L120,160 L160,160 L160,190 L200,190 L200,140 L240,140 L240,100 L260,100 L260,60 L280,60 L280,100 L300,100 L300,140 L340,140 L340,170 L380,170 L380,130 L420,130 L420,110 L460,110 L460,150 L500,150 L500,120 L540,120 L540,90 L580,90 L580,130 L620,130 L620,160 L660,160 L660,110 L700,110 L700,80 L720,80 L720,50 L740,50 L740,80 L760,80 L760,120 L800,120 L800,150 L840,150 L840,100 L880,100 L880,130 L920,130 L920,170 L960,170 L960,140 L1000,140 L1000,180 L1040,180 L1040,150 L1080,150 L1080,190 L1120,190 L1120,160 L1160,160 L1160,200 L1200,200 L1200,170 L1240,170 L1240,210 L1280,210 L1280,180 L1320,180 L1320,220 L1360,220 L1360,190 L1400,190 L1400,230 L1440,230 L1440,320 Z"/>
-        <rect x="255" y="55" width="30" height="8" fill="#1a1a1a" rx="1"/>
-        <rect x="715" y="45" width="10" height="5" fill="#CC0033" opacity="0.6"/>
-      </svg>
+
+<!-- ═══ GRAIN OVERLAY ═══ -->
+<svg id="grain-svg" xmlns="http://www.w3.org/2000/svg">
+  <filter id="grain-filter" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.68" numOctaves="4" stitchTiles="stitch"/>
+    <feColorMatrix type="saturate" values="0"/>
+  </filter>
+  <rect width="100%" height="100%" filter="url(#grain-filter)"/>
+</svg>
+
+<!-- ═══ NAV ═══ -->
+<nav id="nav">
+  <a href="/" class="logo">U<span class="n">N</span>ite</a>
+  <div class="nav-right">
+    <a href="/features/onboarding.html" class="signin">Sign In</a>
+    <a href="/features/marketplace.html" class="signin">Marketplace</a>
+    <a href="/features/course-compass.html" class="signin">Course Compass</a>
+    <a href="/features/community.html" class="signin">Community</a>
+    <a href="/features/onboarding.html" class="nav-cta">Join UNite →</a>
+  </div>
+  <button class="hamburger" id="ham" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mob-menu">
+  <a href="/features/onboarding.html">Sign In</a>
+  <a href="/features/marketplace.html">Marketplace</a>
+  <a href="/features/course-compass.html">Course Compass</a>
+  <a href="/features/community.html">Community</a>
+  <a href="/features/onboarding.html" style="color:var(--red)">Join UNite →</a>
+</div>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero" id="hero">
+  <div class="hero-slash"></div>
+
+  <!-- Campus skyline silhouette -->
+  <svg class="hero-skyline" viewBox="0 0 1440 180" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <g fill="#FFCD00" opacity="0.055">
+      <rect x="0"    y="100" width="68"  height="80"/>
+      <rect x="18"   y="64"  width="32"  height="36"/>
+      <rect x="78"   y="110" width="55"  height="70"/>
+      <rect x="88"   y="80"  width="18"  height="30"/>
+      <rect x="143"  y="58"  width="92"  height="122"/>
+      <rect x="165"  y="28"  width="28"  height="30"/>
+      <rect x="172"  y="14"  width="8"   height="14"/>
+      <rect x="245"  y="72"  width="64"  height="108"/>
+      <rect x="319"  y="36"  width="110" height="144"/>
+      <rect x="336"  y="14"  width="60"  height="22"/>
+      <rect x="356"  y="0"   width="10"  height="14"/>
+      <rect x="439"  y="62"  width="72"  height="118"/>
+      <rect x="521"  y="42"  width="46"  height="138"/>
+      <rect x="530"  y="22"  width="28"  height="20"/>
+      <rect x="577"  y="16"  width="108" height="164"/>
+      <rect x="596"  y="0"   width="64"  height="16"/>
+      <rect x="620"  y="-8"  width="12"  height="8"/>
+      <rect x="695"  y="52"  width="66"  height="128"/>
+      <rect x="771"  y="68"  width="80"  height="112"/>
+      <rect x="784"  y="42"  width="44"  height="26"/>
+      <rect x="861"  y="58"  width="56"  height="122"/>
+      <rect x="927"  y="78"  width="74"  height="102"/>
+      <rect x="938"  y="52"  width="38"  height="26"/>
+      <rect x="1011" y="66"  width="88"  height="114"/>
+      <rect x="1026" y="38"  width="52"  height="28"/>
+      <rect x="1109" y="74"  width="64"  height="106"/>
+      <rect x="1183" y="60"  width="82"  height="120"/>
+      <rect x="1198" y="36"  width="46"  height="24"/>
+      <rect x="1275" y="82"  width="70"  height="98"/>
+      <rect x="1355" y="92"  width="85"  height="88"/>
+    </g>
+  </svg>
+
+  <div class="hero-content">
+    <div class="hero-label">✦ For University of Calgary Students Only</div>
+
+    <h1 class="hero-headline" id="hero-hl">
+      <!-- Words injected by JS -->
+    </h1>
+
+    <p class="hero-sub">
+      The all-in-one platform to plan your degree,<br>
+      find your people, and make the most of UCalgary.
+    </p>
+
+    <div class="hero-buttons">
+      <a href="/features/onboarding.html" class="btn-primary">
+        <span style="width:10px;height:10px;border-radius:50%;background:#fff;display:inline-block;flex-shrink:0;"></span>
+        Join with UCalgary Email
+      </a>
+      <a href="#features" class="btn-ghost">See How It Works ↓</a>
     </div>
 
-    <main class="landing__hero">
-      <div class="landing__logo">
-        <div class="landing__wordmark" aria-label="UNite">
-          <span class="landing__wordmark-rest">U</span><span class="landing__wordmark-n">N</span><span class="landing__wordmark-rest">ite</span>
-        </div>
-        <p class="landing__tagline">Let's Unite</p>
-      </div>
-
-      <h1 class="landing__headline">University is better together.</h1>
-      <p class="landing__subtext">The all-in-one platform for UCalgary students.</p>
-
-      <div class="landing__cards">
-        <a href="/features/marketplace.html" class="landing__card">
-          <span class="landing__card-icon" aria-hidden="true">🎒</span>
-          <h2 class="landing__card-title">Settle In</h2>
-          <p class="landing__card-desc">Buy and sell on campus. No car needed — meet at TFDL, MacHall, or Science Theatres.</p>
-        </a>
-        <a href="/features/course-compass.html" class="landing__card">
-          <span class="landing__card-icon" aria-hidden="true">🧭</span>
-          <h2 class="landing__card-title">Find My Way</h2>
-          <p class="landing__card-desc">Map your degree, unlock prerequisites, and know exactly what to take next semester.</p>
-        </a>
-        <a href="/features/community.html" class="landing__card">
-          <span class="landing__card-icon" aria-hidden="true">🤝</span>
-          <h2 class="landing__card-title">Meet People</h2>
-          <p class="landing__card-desc">Join club events, pull up to pickup sports, and chat with verified UCalgary students.</p>
-        </a>
-      </div>
-    </main>
-
-    <footer class="landing__footer">
-      Verified UCalgary students only<span class="landing__footer-dot">·</span>Let's Unite
-    </footer>
+    <div class="hero-trust">@ucalgary.ca verified &nbsp;·&nbsp; Always free &nbsp;·&nbsp; 33,000 Dinos</div>
   </div>
+</section>
+
+<!-- ═══ FEATURE STRIPS ═══ -->
+<div id="features">
+
+  <!-- STRIP 1 — Marketplace -->
+  <div class="feature-strip reveal">
+    <div class="fp-text w55 s1-text">
+      <div class="ghost-num">01</div>
+      <div class="strip-label">Marketplace</div>
+      <h2 class="strip-heading">SETTLE<br>IN</h2>
+      <p class="strip-body">Buy and sell textbooks, furniture, and gear with fellow UCalgary students. No car needed — meet at MacHall, TFDL, or any campus building.</p>
+      <a href="/features/marketplace.html" class="btn-strip btn-red-solid">Browse Marketplace →</a>
+    </div>
+
+    <div class="fp-vis w45 s1-vis">
+      <div class="market-mock">
+        <div class="m-card-behind"></div>
+        <div class="m-card">
+          <div class="m-card-photo">textbook photo</div>
+          <div class="m-card-body">
+            <div class="m-card-title">CPSC 331 Textbook</div>
+            <div class="m-card-price">$45</div>
+            <div class="m-badges">
+              <span class="m-badge mb-green">Like New</span>
+              <span class="m-badge mb-blue">TFDL</span>
+            </div>
+            <div class="m-card-btn">Let's Unite →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRIP 2 — Course Compass -->
+  <div class="feature-strip strip-2 reveal" style="flex-direction:row-reverse;">
+    <div class="fp-text w55 s2-text">
+      <div class="ghost-num">02</div>
+      <div class="strip-label">Course Compass</div>
+      <h2 class="strip-heading">FIND MY<br>WAY</h2>
+      <p class="strip-body">Upload your UCalgary transcript and get a personalized semester-by-semester roadmap. Know exactly what to take next and graduate on time.</p>
+      <a href="/features/course-compass.html" class="btn-strip btn-gold-solid">Plan My Degree →</a>
+    </div>
+
+    <div class="fp-vis w45 s2-vis">
+      <div class="prereq-tree">
+        <div class="p-row"><div class="p-node p-node-dark">CPSC<br>203</div></div>
+        <div class="p-line"></div>
+        <div class="p-row"><div class="p-node p-node-dark">CPSC<br>217</div></div>
+        <div class="p-line"></div>
+        <div class="p-row"><div class="p-node p-node-active">CPSC<br>331</div></div>
+        <div class="p-line" style="background:rgba(0,0,0,0.1)"></div>
+        <div class="p-row"><div class="p-node p-node-future">CPSC<br>413</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRIP 3 — Community -->
+  <div class="feature-strip reveal">
+    <div class="fp-text w55 s3-text">
+      <div class="ghost-num">03</div>
+      <div class="strip-label">Community</div>
+      <h2 class="strip-heading">MEET<br>PEOPLE</h2>
+      <p class="strip-body">Find club events, join pickup sports games, and chat with verified UCalgary students in real-time. Whether you're an introvert or extrovert — there's a spot for you.</p>
+      <a href="/features/community.html" class="btn-strip btn-outline-wh">Join the Community →</a>
+    </div>
+
+    <div class="fp-vis w45 s3-vis">
+      <div class="chat-mock">
+        <div class="chat-row">
+          <div class="chat-ava ca1">AK</div>
+          <div class="chat-bubble-wrap">
+            <div class="chat-prog">CS · Y2</div>
+            <div class="chat-msg">Anyone in CPSC 331 this semester? 📚</div>
+          </div>
+        </div>
+        <div class="chat-row right">
+          <div class="chat-ava ca2">MT</div>
+          <div class="chat-bubble-wrap">
+            <div class="chat-prog">ENGG · Y3</div>
+            <div class="chat-msg">Soccer Saturday 2pm — need 3 more ⚽</div>
+          </div>
+        </div>
+        <div class="chat-row">
+          <div class="chat-ava ca3">SL</div>
+          <div class="chat-bubble-wrap">
+            <div class="chat-prog">PSYC · Y1</div>
+            <div class="chat-msg">Found a study group already! 🙌</div>
+          </div>
+        </div>
+        <div class="chat-row right">
+          <div class="chat-ava ca4">RK</div>
+          <div class="chat-bubble-wrap">
+            <div class="chat-prog">BCOMM · Y2</div>
+            <div class="chat-msg">MKTG 317 textbook $30 at MacHall ✅</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ STATS BAR ═══ -->
+<div class="stats-bar reveal">
+  <div class="stats-grid">
+    <div class="stat">
+      <div class="stat-num">33,000+</div>
+      <div class="stat-lbl">UCalgary Students</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">172</div>
+      <div class="stat-lbl">Departments</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">5,569</div>
+      <div class="stat-lbl">Courses Mapped</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">#1</div>
+      <div class="stat-lbl">Campus App</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TESTIMONIALS ═══ -->
+<section class="testimonials reveal">
+  <div class="t-inner">
+    <div class="t-header">
+      <span class="t-tag">Student Voices</span>
+      <h2 class="t-heading">BUILT FOR DINOS,<br>BY DINOS.</h2>
+    </div>
+    <div class="t-grid">
+      <div class="t-card">
+        <p class="t-quote">"I found my CPSC 331 textbook for $30 and met the seller at TFDL. Saved me $80 and didn't need a car."</p>
+        <div class="t-foot">
+          <div class="t-ava ta1">AK</div>
+          <div>
+            <div class="t-name">Aisha K.</div>
+            <span class="t-prog">CS · Year 2</span>
+          </div>
+        </div>
+      </div>
+      <div class="t-card">
+        <p class="t-quote">"Course Compass showed me I was taking courses in the wrong order. Fixed my whole 4-year plan in 10 minutes."</p>
+        <div class="t-foot">
+          <div class="t-ava ta2">MT</div>
+          <div>
+            <div class="t-name">Marcus T.</div>
+            <span class="t-prog">Engineering · Year 3</span>
+          </div>
+        </div>
+      </div>
+      <div class="t-card">
+        <p class="t-quote">"I'm pretty introverted but found a study group through UNite before my first week even started."</p>
+        <div class="t-foot">
+          <div class="t-ava ta3">SL</div>
+          <div>
+            <div class="t-name">Sarah L.</div>
+            <span class="t-prog">Psychology · Year 1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA BANNER ═══ -->
+<section class="cta-section reveal">
+  <!-- Grain -->
+  <svg class="cta-grain" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+    <filter id="cta-grain-f">
+      <feTurbulence type="fractalNoise" baseFrequency="0.68" numOctaves="4" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#cta-grain-f)"/>
+  </svg>
+
+  <!-- Skyline -->
+  <div class="cta-skyline">
+    <svg viewBox="0 0 1440 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:120px;">
+      <g fill="rgba(0,0,0,0.12)">
+        <rect x="0"    y="60"  width="68"  height="60"/>
+        <rect x="18"   y="40"  width="32"  height="20"/>
+        <rect x="78"   y="70"  width="55"  height="50"/>
+        <rect x="143"  y="30"  width="92"  height="90"/>
+        <rect x="165"  y="10"  width="28"  height="20"/>
+        <rect x="245"  y="44"  width="64"  height="76"/>
+        <rect x="319"  y="20"  width="110" height="100"/>
+        <rect x="336"  y="4"   width="60"  height="16"/>
+        <rect x="439"  y="40"  width="72"  height="80"/>
+        <rect x="521"  y="24"  width="46"  height="96"/>
+        <rect x="577"  y="10"  width="108" height="110"/>
+        <rect x="695"  y="32"  width="66"  height="88"/>
+        <rect x="771"  y="44"  width="80"  height="76"/>
+        <rect x="861"  y="36"  width="56"  height="84"/>
+        <rect x="927"  y="50"  width="74"  height="70"/>
+        <rect x="1011" y="42"  width="88"  height="78"/>
+        <rect x="1109" y="48"  width="64"  height="72"/>
+        <rect x="1183" y="38"  width="82"  height="82"/>
+        <rect x="1275" y="54"  width="70"  height="66"/>
+        <rect x="1355" y="60"  width="85"  height="60"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="cta-inner">
+    <h2 class="cta-heading">READY TO<br>UNITE?</h2>
+    <p class="cta-sub">Join 33,000 UCalgary students on the platform built for you.</p>
+    <a href="/features/onboarding.html" class="btn-cta">Join with your @ucalgary.ca email →</a>
+    <span class="cta-fine">Free forever · No app download · @ucalgary.ca required</span>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="f-inner">
+    <div class="f-top">
+      <div class="f-logo-wrap">
+        <a href="#" class="f-logo">U<span class="n">N</span>ite</a>
+        <p class="f-tagline">Let's Unite.</p>
+      </div>
+
+      <div class="f-col">
+        <div class="f-col-title">Platform</div>
+        <ul>
+          <li><a href="#">Marketplace</a></li>
+          <li><a href="#">Course Compass</a></li>
+          <li><a href="#">Community Hub</a></li>
+          <li><a href="#">Group Chat</a></li>
+        </ul>
+      </div>
+
+      <div class="f-col">
+        <div class="f-col-title">UCalgary</div>
+        <ul>
+          <li><a href="#">Programs</a></li>
+          <li><a href="#">Course Catalog</a></li>
+          <li><a href="#">Campus Map</a></li>
+          <li><a href="#">Student Life</a></li>
+        </ul>
+      </div>
+
+      <div class="f-col">
+        <div class="f-col-title">Community</div>
+        <ul>
+          <li><a href="#">Events</a></li>
+          <li><a href="#">Sports &amp; Hobbies</a></li>
+          <li><a href="#">Clubs</a></li>
+          <li><a href="#">Study Groups</a></li>
+        </ul>
+      </div>
+
+      <div class="f-col">
+        <div class="f-col-title">Legal</div>
+        <ul>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Service</a></li>
+          <li><a href="#">Guidelines</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="f-bottom">
+      <span class="f-copy">© 2026 UNite. Built for UCalgary.</span>
+      <span class="f-dinos">Made by Dinos, for Dinos. 🦕</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ── NAV SCROLL ── */
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 60);
+  }, { passive: true });
+
+  /* ── HAMBURGER ── */
+  const ham = document.getElementById('ham');
+  const mob = document.getElementById('mob-menu');
+  ham.addEventListener('click', () => {
+    ham.classList.toggle('open');
+    mob.classList.toggle('open');
+  });
+
+  /* ── HERO HEADLINE — word-by-word animation ── */
+  (function buildHeadline() {
+    const el = document.getElementById('hero-hl');
+    const lines = [
+      ['UNIVERSITY', 'IS'],
+      ['BETTER'],
+      ['TOGETHER.']
+    ];
+    const baseDelay = 0.42; // seconds
+    const step = 0.07;
+    let wordIdx = 0;
+
+    lines.forEach((lineWords, li) => {
+      const lineEl = document.createElement('div');
+      lineEl.style.display = 'block';
+
+      lineWords.forEach((word, wi) => {
+        if (wi > 0) {
+          const sp = document.createTextNode('\u00A0');
+          lineEl.appendChild(sp);
+        }
+
+        const outer = document.createElement('span');
+        outer.className = 'word-wrap';
+
+        const inner = document.createElement('span');
+        inner.className = 'word-inner';
+        inner.style.animationDelay = (baseDelay + wordIdx * step) + 's';
+
+        // Last line — wrap in together-wrap for the red underline
+        if (li === lines.length - 1) {
+          const tw = document.createElement('span');
+          tw.className = 'together-wrap';
+          tw.textContent = word;
+          inner.appendChild(tw);
+        } else {
+          inner.textContent = word;
+        }
+
+        outer.appendChild(inner);
+        lineEl.appendChild(outer);
+        wordIdx++;
+      });
+
+      el.appendChild(lineEl);
+    });
+  })();
+
+  /* ── SMOOTH SCROLL ── */
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const href = a.getAttribute('href');
+      if (href === '#') return;
+      e.preventDefault();
+      const tgt = document.querySelector(href);
+      if (tgt) {
+        window.scrollTo({ top: tgt.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+      }
+    });
+  });
+
+  /* ── SCROLL REVEAL ── */
+  const revealObs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in');
+        revealObs.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+</script>
 </body>
 </html>

@@ -9,8 +9,8 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background-color: var(--color-black);
-  color: var(--color-white);
+  background-color: var(--color-white);
+  color: var(--color-black);
   overflow-x: hidden;
   position: relative;
 }
@@ -34,8 +34,8 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 35%;
-  min-height: 180px;
+  height: 38%;
+  min-height: 200px;
   z-index: 1;
   pointer-events: none;
 }
@@ -53,17 +53,6 @@
   animation: fade-in-down 0.8s ease forwards;
 }
 
-.landing__logo img {
-  height: 56px;
-  width: auto;
-  filter: brightness(0) invert(1);
-}
-
-.landing__logo img .logo-n {
-  filter: none;
-}
-
-/* Inline SVG wordmark for dark bg */
 .landing__wordmark {
   font-family: var(--font-display);
   font-size: 3.5rem;
@@ -77,7 +66,7 @@
 }
 
 .landing__wordmark-rest {
-  color: var(--color-white);
+  color: var(--color-black);
 }
 
 .landing__tagline {
@@ -96,13 +85,14 @@
   line-height: 1.05;
   max-width: 18ch;
   margin-bottom: var(--space-md);
+  color: var(--color-black);
   opacity: 0;
   animation: fade-in-up 0.9s ease 0.3s forwards;
 }
 
 .landing__subtext {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--color-text-muted);
   max-width: 32ch;
   margin-bottom: var(--space-2xl);
   opacity: 0;
@@ -121,16 +111,16 @@
 }
 
 .landing__card {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   padding: var(--space-lg);
   text-align: left;
   cursor: pointer;
+  box-shadow: var(--shadow-card);
   transition: transform var(--transition-base),
     box-shadow var(--transition-base),
-    border-color var(--transition-base),
-    background-color var(--transition-base);
+    border-color var(--transition-base);
   opacity: 0;
   animation: fade-in-up 0.7s ease forwards;
 }
@@ -142,9 +132,7 @@
 .landing__card:hover {
   transform: translateY(-6px);
   border-color: var(--color-primary);
-  background: rgba(204, 0, 51, 0.12);
-  box-shadow: 0 0 32px rgba(204, 0, 51, 0.35),
-    0 12px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-hover), 0 0 24px rgba(204, 0, 51, 0.15);
 }
 
 .landing__card-icon {
@@ -157,13 +145,13 @@
   font-family: var(--font-display);
   font-size: 1.5rem;
   letter-spacing: 0.03em;
-  color: var(--color-white);
+  color: var(--color-black);
   margin-bottom: var(--space-xs);
 }
 
 .landing__card-desc {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-muted);
   line-height: 1.45;
 }
 
@@ -176,6 +164,7 @@
   text-align: center;
   font-size: 0.8125rem;
   color: var(--color-text-muted);
+  background: linear-gradient(to top, var(--color-white), transparent);
   opacity: 0;
   animation: fade-in 1s ease 1.4s forwards;
 }
@@ -228,6 +217,11 @@
 
   .landing__subtext {
     font-size: 1.125rem;
+  }
+
+  .landing__skyline {
+    height: 42%;
+    min-height: 240px;
   }
 }
 
