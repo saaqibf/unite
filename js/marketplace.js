@@ -818,7 +818,19 @@ function applyCrossFeatureDefaults() {
 /**
  * Initializes the marketplace page on DOM ready.
  */
+// Redirects to onboarding if the user has not completed their profile
+function checkOnboardingComplete() {
+  var profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  var token = localStorage.getItem('unite_token');
+  if (token && (!profile.program || !profile.year)) {
+    window.location.href = '/features/onboarding.html';
+    return false;
+  }
+  return true;
+}
+
 async function init() {
+  if (!checkOnboardingComplete()) return;
   if (!getLocalListings().length) {
     persistListingsLocal(getSeedListings());
   }

@@ -485,7 +485,19 @@ function bindEvents() {
 /**
  * Initializes Community Hub on DOM ready.
  */
+// Redirects to onboarding if the user has not completed their profile
+function checkOnboardingComplete() {
+  var profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  var token = localStorage.getItem('unite_token');
+  if (token && (!profile.program || !profile.year)) {
+    window.location.href = '/features/onboarding.html';
+    return false;
+  }
+  return true;
+}
+
 function init() {
+  if (!checkOnboardingComplete()) return;
   loadEvents();
   bindEvents();
   renderFeed();

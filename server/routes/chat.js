@@ -38,7 +38,7 @@ router.get('/config', (req, res) => {
  */
 router.post('/message', async (req, res) => {
   try {
-    const { text, user, program } = req.body;
+    const { text, user, program, year } = req.body;
     if (!text || !user) return res.status(400).json({ error: 'Missing text or user' });
 
     const pusher = getPusher();
@@ -49,6 +49,7 @@ router.post('/message', async (req, res) => {
     await pusher.trigger('unite-global-chat', 'new-message', {
       user,
       program: program || 'UCalgary',
+      year: year || '',
       text,
       timestamp: new Date().toISOString()
     });

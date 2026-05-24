@@ -109,6 +109,18 @@ function requireAuth() {
   }
 }
 
+// Redirects to onboarding if the user has not completed their profile (no program or year set).
+// Returns false if a redirect was triggered, true if the profile is complete.
+function checkOnboardingComplete() {
+  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  const token = localStorage.getItem('unite_token');
+  if (token && (!profile.program || !profile.year)) {
+    window.location.href = '/features/onboarding.html';
+    return false;
+  }
+  return true;
+}
+
 // Redirects to Course Compass if the user IS already logged in — call this on login/register pages
 function redirectIfLoggedIn() {
   if (isLoggedIn()) {
@@ -132,6 +144,7 @@ export {
   getUser,
   isLoggedIn,
   requireAuth,
+  checkOnboardingComplete,
   redirectIfLoggedIn,
   authHeader
 };
