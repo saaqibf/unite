@@ -32,7 +32,6 @@
     <section class="community-feed" id="community-feed">
       <div class="community-actions" id="community-actions">
         <button type="button" class="btn-primary btn-sm" id="post-club-btn">+ Club Event</button>
-        <button type="button" class="btn-secondary btn-sm" id="post-sport-btn">+ Pull Up Event</button>
         <select id="filter-activity" class="input-field" style="width:auto;max-width:10rem" aria-label="Filter by activity">
           <option value="">All activities</option>
           <option value="Soccer">Soccer</option>
@@ -45,6 +44,50 @@
         <button type="button" class="btn-secondary btn-sm community-actions__admin" id="admin-verified-toggle">
           <span id="admin-verified-label">Demo: Verify Club (off)</span>
         </button>
+      </div>
+
+      <div class="community-section">
+        <h2 class="community-section__title text-display">Club Newsletter</h2>
+        <p class="community-section__sub text-muted">Verified clubs only — gold checkmark badge</p>
+        <div id="club-feed" class="feed-cards" aria-live="polite"></div>
+      </div>
+
+      <div class="community-section">
+        <h2 class="community-section__title text-display">Sports &amp; Hobbies — Pull Up</h2>
+        <div id="sports-feed" class="feed-cards" aria-live="polite"></div>
+
+        <form id="sports-post-form" class="sports-post-form card card--flat">
+          <h3 class="sports-post-form__heading">Post a Pull Up Event</h3>
+          <div class="input-group">
+            <label class="input-label" for="sport-activity">Activity name</label>
+            <input type="text" id="sport-activity" class="input-field" required placeholder="e.g. Pickup Soccer">
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="sport-date">Date</label>
+            <input type="date" id="sport-date" class="input-field" required>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="sport-time">Time</label>
+            <input type="time" id="sport-time" class="input-field" required>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="sport-location">Location</label>
+            <input type="text" id="sport-location" class="input-field" required value="UCalgary campus">
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="sport-spots">Spots available</label>
+            <input type="number" id="sport-spots" class="input-field" required min="1" max="20" value="10">
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="sport-skill">Skill level</label>
+            <select id="sport-skill" class="input-field" required>
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Any" selected>Any</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-primary btn-block">Post Event</button>
+        </form>
       </div>
     </section>
 
@@ -74,18 +117,14 @@
   <div class="modal-overlay" id="post-modal" role="dialog" aria-hidden="true">
     <div class="modal-panel">
       <div class="modal-panel__header">
-        <h2 class="modal-panel__title" id="post-modal-title">Post Event</h2>
+        <h2 class="modal-panel__title" id="post-modal-title">Club Newsletter Post</h2>
         <button type="button" class="modal-close" data-close-modal="post-modal" aria-label="Close">&times;</button>
       </div>
       <form id="post-form">
-        <input type="hidden" id="post-type" value="sport">
-        <div class="input-group" id="club-only-fields" hidden>
+        <input type="hidden" id="post-type" value="club">
+        <div class="input-group">
           <label class="input-label" for="post-org">Club name</label>
-          <input type="text" id="post-org" class="input-field" placeholder="e.g. CS Society">
-        </div>
-        <div class="input-group" id="sport-only-fields">
-          <label class="input-label" for="post-activity">Activity</label>
-          <input type="text" id="post-activity" class="input-field" placeholder="e.g. Pickup Soccer">
+          <input type="text" id="post-org" class="input-field" required placeholder="e.g. UCalgary Computer Science Society">
         </div>
         <div class="input-group">
           <label class="input-label" for="post-title">Event name</label>
@@ -93,28 +132,15 @@
         </div>
         <div class="input-group">
           <label class="input-label" for="post-date">Date</label>
-          <input type="text" id="post-date" class="input-field" required placeholder="e.g. Sat, May 31">
+          <input type="text" id="post-date" class="input-field" required placeholder="e.g. Thu, May 29">
         </div>
         <div class="input-group">
           <label class="input-label" for="post-time">Time</label>
-          <input type="text" id="post-time" class="input-field" required placeholder="e.g. 10:00 AM">
+          <input type="text" id="post-time" class="input-field" required placeholder="e.g. 6:00 PM">
         </div>
         <div class="input-group">
           <label class="input-label" for="post-location">Location</label>
-          <input type="text" id="post-location" class="input-field" required placeholder="e.g. MacEwan Field">
-        </div>
-        <div class="input-group" id="sport-spots-field">
-          <label class="input-label" for="post-spots">Spots available</label>
-          <input type="number" id="post-spots" class="input-field" min="2" value="10">
-        </div>
-        <div class="input-group" id="sport-skill-field">
-          <label class="input-label" for="post-skill">Skill level</label>
-          <select id="post-skill" class="input-field">
-            <option value="All levels">All levels</option>
-            <option value="Beginner">Beginner</option>
-            <option value="Intermediate">Intermediate</option>
-            <option value="Advanced">Advanced</option>
-          </select>
+          <input type="text" id="post-location" class="input-field" required placeholder="e.g. ICT 121">
         </div>
         <div class="input-group">
           <label class="input-label" for="post-description">Description</label>

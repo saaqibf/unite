@@ -1,15 +1,23 @@
 /**
- * Community Hub — events feed, RSVP, Pull Up, tabs, and post forms
+ * Community Hub — club newsletter, sports Pull Up feed, RSVP, and tabs
  */
 
-const STORAGE_EVENTS = 'unite_community_events';
+const STORAGE_CLUB = 'unite_community_events';
+const STORAGE_SPORTS = 'unite_sports_events';
 const STORAGE_VERIFIED = 'unite_admin_verified';
 
-let events = [];
+const VERIFIED_CLUBS = [
+  'UCalgary Computer Science Society',
+  'Engineers Without Borders UCalgary',
+  'UCalgary Kinesiology Club'
+];
+
+let clubEvents = [];
+let sportsEvents = [];
 let activityFilter = '';
 
 /**
- * Returns the current user from chat config or a demo profile.
+ * Returns the current user from chat config or localStorage profile.
  */
 function getCurrentUser() {
   const cfg = window.UNITE_CHAT_CONFIG && window.UNITE_CHAT_CONFIG.currentUser;
@@ -22,12 +30,14 @@ function getCurrentUser() {
 }
 
 /**
- * Checks if the current user has admin verified-club toggle for demo.
+ * Returns true when a club name is in the hardcoded verified list or demo toggle is on.
  */
-function isVerifiedClub() {
+function isClubVerified(orgName) {
+  if (!orgName) return false;
+  const normalized = orgName.trim().toLowerCase();
+  if (VERIFIED_CLUBS.some((c) => c.toLowerCase() === normalized)) return true;
   if (localStorage.getItem(STORAGE_VERIFIED) === 'true') return true;
-  const user = getCurrentUser();
-  return Boolean(user.verified);
+  return false;
 }
 
 /**
@@ -40,38 +50,76 @@ function escapeHtml(text) {
 }
 
 /**
- * Loads events from localStorage or returns built-in demo events.
+ * Formats a date input value for display on event cards.
+ */
+function formatDisplayDate(isoDate) {
+  if (!isoDate) return '';
+  const d = new Date(isoDate + 'T12:00:00');
+  if (Number.isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/**
+ * Formats a time input value for display on event cards.
+ */
+function formatDisplayTime(timeValue) {
+  if (!timeValue) return '';
+  const [h, m] = timeValue.split(':');
+  const date = new Date();
+  date.setHours(parseInt(h, 10), parseInt(m, 10));
+  return date.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' });
+}
+
+/**
+ * Loads club and sports events from localStorage or seeds demo data.
  */
 function loadEvents() {
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_EVENTS) || '[]');
-    if (stored.length) {
-      events = stored;
-      return;
-    }
+    const clubs = JSON.parse(localStorage.getItem(STORAGE_CLUB) || '[]');
+    if (clubs.length) clubEvents = clubs;
   } catch {
-    /* ignore */
+    clubEvents = [];
   }
-  events = getSeedEvents();
-  saveEvents();
+  if (!clubEvents.length) {
+    clubEvents = getSeedClubEvents();
+    saveClubEvents();
+  }
+
+  try {
+    const sports = JSON.parse(localStorage.getItem(STORAGE_SPORTS) || '[]');
+    if (sports.length) sportsEvents = sports;
+  } catch {
+    sportsEvents = [];
+  }
+  if (!sportsEvents.length) {
+    sportsEvents = getSeedSportsEvents();
+    saveSportsEvents();
+  }
 }
 
 /**
- * Persists the events array to localStorage.
+ * Persists club events to localStorage.
  */
-function saveEvents() {
-  localStorage.setItem(STORAGE_EVENTS, JSON.stringify(events));
+function saveClubEvents() {
+  localStorage.setItem(STORAGE_CLUB, JSON.stringify(clubEvents));
 }
 
 /**
- * Returns default demo events for club newsletter and Pull Up sports.
+ * Persists sports events to unite_sports_events in localStorage.
  */
-function getSeedEvents() {
+function saveSportsEvents() {
+  localStorage.setItem(STORAGE_SPORTS, JSON.stringify(sportsEvents));
+}
+
+/**
+ * Returns demo verified club newsletter posts.
+ */
+function getSeedClubEvents() {
   return [
     {
-      id: 'evt-1',
+      id: 'club-1',
       type: 'club',
-      org: 'CS Society',
+      org: 'UCalgary Computer Science Society',
       verified: true,
       title: 'Hackathon Prep Night',
       date: 'Thu, May 29',
@@ -80,20 +128,54 @@ function getSeedEvents() {
       description:
         "Join the CS Society for a prep session before Calgary's biggest student hackathon. Pizza provided. Bring your laptop.",
       attendees: ['Sarah C.', 'Marcus T.', 'Priya K.'],
-      activityType: '',
-      createdAt: 1
+      createdAt: 3
     },
     {
-      id: 'evt-2',
+      id: 'club-2',
+      type: 'club',
+      org: 'Engineers Without Borders UCalgary',
+      verified: true,
+      title: 'Sustainability Workshop',
+      date: 'Wed, May 28',
+      time: '5:30 PM',
+      location: 'ENG 101',
+      description: 'Learn how engineering students can support global development projects this summer.',
+      attendees: ['Alex M.', 'Jordan L.'],
+      createdAt: 2
+    },
+    {
+      id: 'club-3',
+      type: 'club',
+      org: 'UCalgary Kinesiology Club',
+      verified: true,
+      title: 'Intramural Info Session',
+      date: 'Fri, May 30',
+      time: '4:00 PM',
+      location: 'Kinesiology Complex',
+      description: 'Sign up for fall intramurals and meet team captains.',
+      attendees: ['Taylor R.', 'Casey D.', 'Sam P.'],
+      createdAt: 1
+    }
+  ];
+}
+
+/**
+ * Returns demo sports Pull Up events.
+ */
+function getSeedSportsEvents() {
+  return [
+    {
+      id: 'sport-1',
       type: 'sport',
+      activity: 'Soccer',
       org: 'Pickup Soccer — Mac Field',
       title: 'Saturday Morning Kickabout',
       date: 'Sat, May 31',
       time: '10:00 AM',
-      location: 'MacEwan Field',
+      location: 'MacEwan Field, UCalgary campus',
       description: 'Casual 7v7 pickup soccer. All skill levels welcome. Bring cleats or runners.',
       spots: 12,
-      skillLevel: 'All levels',
+      skillLevel: 'Any',
       activityType: 'Soccer',
       attendees: ['Alex M.', 'Jordan L.', 'Taylor R.', 'Primel J.', 'Richard H.', 'Casey D.', 'Sam P.', 'Riley K.', 'Morgan B.'],
       createdAt: 2
@@ -120,56 +202,88 @@ function switchTab(tab) {
 }
 
 /**
- * Renders the chronological events feed (newest first).
+ * Builds HTML for a single club newsletter event card.
+ */
+function renderClubCard(evt) {
+  const count = (evt.attendees || []).length;
+  const user = getCurrentUser();
+  const joined = (evt.attendees || []).includes(user.name);
+  const verified = isClubVerified(evt.org) || evt.verified;
+
+  return `
+    <article class="event-card" data-id="${escapeHtml(evt.id)}" data-kind="club">
+      <header class="event-card__header">
+        <div class="event-card__org-row">
+          <p class="event-card__org">${escapeHtml(evt.org)}</p>
+          ${verified ? '<span class="verified">Verified Club</span>' : ''}
+        </div>
+      </header>
+      <h2 class="event-card__title">${escapeHtml(evt.title)}</h2>
+      <div class="event-card__meta">
+        <span>${escapeHtml(evt.date)} · ${escapeHtml(evt.time)}</span>
+        <span>${escapeHtml(evt.location)}</span>
+      </div>
+      <p class="event-card__desc">${escapeHtml(evt.description)}</p>
+      <footer class="event-card__footer">
+        <span class="event-card__rsvp">${count} student${count === 1 ? '' : 's'} going</span>
+        <button type="button" class="btn-primary btn-sm ${joined ? 'btn-secondary' : ''}" data-action="rsvp" data-id="${escapeHtml(evt.id)}" ${joined ? 'disabled' : ''}>
+          ${joined ? 'Going ✓' : 'RSVP'}
+        </button>
+      </footer>
+    </article>`;
+}
+
+/**
+ * Builds HTML for a single sports Pull Up event card.
+ */
+function renderSportCard(evt) {
+  const count = (evt.attendees || []).length;
+  const user = getCurrentUser();
+  const joined = (evt.attendees || []).includes(user.name);
+  const spotsLeft = evt.spots != null ? Math.max(0, evt.spots - count) : null;
+
+  return `
+    <article class="event-card" data-id="${escapeHtml(evt.id)}" data-kind="sport">
+      <header class="event-card__header">
+        <div>
+          <p class="event-card__org">${escapeHtml(evt.org || evt.activity)}</p>
+          <span class="badge badge--gold">${escapeHtml(evt.activityType || evt.activity || 'Sports')}</span>
+        </div>
+      </header>
+      <h2 class="event-card__title">${escapeHtml(evt.title)}</h2>
+      <div class="event-card__meta">
+        <span>${escapeHtml(evt.date)} · ${escapeHtml(evt.time)}</span>
+        <span>${escapeHtml(evt.location)}</span>
+        ${spotsLeft != null ? `<span>${spotsLeft} spots left</span>` : ''}
+        ${evt.skillLevel ? `<span>${escapeHtml(evt.skillLevel)}</span>` : ''}
+      </div>
+      <p class="event-card__desc">${escapeHtml(evt.description || '')}</p>
+      <footer class="event-card__footer">
+        <span class="event-card__rsvp">${count} student${count === 1 ? '' : 's'} going</span>
+        <button type="button" class="btn-primary btn-sm ${joined ? 'btn-secondary' : ''}" data-action="pullup" data-id="${escapeHtml(evt.id)}" ${joined ? 'disabled' : ''}>
+          ${joined ? 'Pulling Up ✓' : 'Pull Up'}
+        </button>
+      </footer>
+    </article>`;
+}
+
+/**
+ * Renders club and sports feeds (newest first).
  */
 function renderFeed() {
-  const feed = document.getElementById('community-feed');
-  let list = [...events];
+  const clubFeed = document.getElementById('club-feed');
+  const sportsFeed = document.getElementById('sports-feed');
+
+  const clubs = [...clubEvents].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  let sports = [...sportsEvents].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   if (activityFilter) {
-    list = list.filter((ev) => ev.type !== 'sport' || ev.activityType === activityFilter);
+    sports = sports.filter((ev) => ev.activityType === activityFilter || ev.activity === activityFilter);
   }
-  const sorted = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-  const cards = sorted
-    .map((evt) => {
-      const isClub = evt.type === 'club';
-      const count = (evt.attendees || []).length;
-      const user = getCurrentUser();
-      const joined = (evt.attendees || []).includes(user.name);
-      const spotsLeft =
-        evt.type === 'sport' && evt.spots != null ? Math.max(0, evt.spots - count) : null;
+  clubFeed.innerHTML = clubs.map(renderClubCard).join('') || '<p class="text-muted">No club posts yet.</p>';
+  sportsFeed.innerHTML = sports.map(renderSportCard).join('') || '<p class="text-muted">No Pull Up events yet — post one below!</p>';
 
-      return `
-        <article class="event-card" data-id="${escapeHtml(evt.id)}">
-          <header class="event-card__header">
-            <div>
-              <p class="event-card__org">${escapeHtml(evt.org || evt.activityType || 'UNite Event')}</p>
-              ${isClub && evt.verified ? '<span class="verified">Verified Club</span>' : ''}
-              ${!isClub ? `<span class="badge badge--gold">${escapeHtml(evt.activityType || 'Sports')}</span>` : ''}
-            </div>
-          </header>
-          <h2 class="event-card__title">${escapeHtml(evt.title)}</h2>
-          <div class="event-card__meta">
-            <span>${escapeHtml(evt.date)} · ${escapeHtml(evt.time)}</span>
-            <span>${escapeHtml(evt.location)}</span>
-            ${spotsLeft != null ? `<span>${spotsLeft} spots left</span>` : ''}
-            ${evt.skillLevel ? `<span>${escapeHtml(evt.skillLevel)}</span>` : ''}
-          </div>
-          <p class="event-card__desc">${escapeHtml(evt.description)}</p>
-          <footer class="event-card__footer">
-            <span class="event-card__rsvp">${count} student${count === 1 ? '' : 's'} going</span>
-            <button type="button" class="btn-primary btn-sm ${joined ? 'btn-secondary' : ''}" data-action="${isClub ? 'rsvp' : 'pullup'}" data-id="${escapeHtml(evt.id)}" ${joined ? 'disabled' : ''}>
-              ${joined ? (isClub ? 'Going ✓' : 'Pulling Up ✓') : isClub ? 'RSVP' : 'Pull Up'}
-            </button>
-          </footer>
-        </article>`;
-    })
-    .join('');
-
-  const actions = document.getElementById('community-actions');
-  feed.innerHTML = (actions ? actions.outerHTML : '') + cards;
-
-  feed.querySelectorAll('[data-action]').forEach((btn) => {
+  document.querySelectorAll('[data-action]').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (btn.dataset.action === 'rsvp') handleRsvp(btn.dataset.id);
       else handlePullUp(btn.dataset.id);
@@ -181,12 +295,12 @@ function renderFeed() {
  * Adds the current user to a club event RSVP list.
  */
 function handleRsvp(eventId) {
-  const evt = events.find((e) => e.id === eventId);
+  const evt = clubEvents.find((e) => e.id === eventId);
   if (!evt) return;
   const user = getCurrentUser();
   if (!evt.attendees) evt.attendees = [];
   if (!evt.attendees.includes(user.name)) evt.attendees.push(user.name);
-  saveEvents();
+  saveClubEvents();
   renderFeed();
 }
 
@@ -194,36 +308,27 @@ function handleRsvp(eventId) {
  * Adds the current user to a sports event attendee list.
  */
 function handlePullUp(eventId) {
-  const evt = events.find((e) => e.id === eventId);
+  const evt = sportsEvents.find((e) => e.id === eventId);
   if (!evt) return;
   const user = getCurrentUser();
   if (!evt.attendees) evt.attendees = [];
   if (evt.spots != null && evt.attendees.length >= evt.spots) return;
   if (!evt.attendees.includes(user.name)) evt.attendees.push(user.name);
-  saveEvents();
+  saveSportsEvents();
   renderFeed();
 }
 
 /**
- * Opens the post-event modal for club or sports type.
+ * Opens the club newsletter post modal.
  */
-function openPostModal(type) {
+function openPostModal() {
   const modal = document.getElementById('post-modal');
-  document.getElementById('post-type').value = type;
-  document.getElementById('post-modal-title').textContent =
-    type === 'club' ? 'Club Newsletter Post' : 'Pull Up — Sports & Hobbies';
-  document.getElementById('club-only-fields').hidden = type !== 'club';
-  document.getElementById('sport-only-fields').hidden = type !== 'sport';
-  document.getElementById('sport-spots-field').hidden = type !== 'sport';
-  document.getElementById('sport-skill-field').hidden = type !== 'sport';
-  document.getElementById('post-org').required = type === 'club';
-  document.getElementById('post-activity').required = type === 'sport';
   modal.classList.add('modal-overlay--open');
   modal.setAttribute('aria-hidden', 'false');
 }
 
 /**
- * Closes the post-event modal.
+ * Closes the club newsletter post modal.
  */
 function closePostModal() {
   const modal = document.getElementById('post-modal');
@@ -233,16 +338,22 @@ function closePostModal() {
 }
 
 /**
- * Submits a new club or sports event from the post form.
+ * Submits a new verified club post from the modal form.
  */
-function submitPost(event) {
+function submitClubPost(event) {
   event.preventDefault();
-  const type = document.getElementById('post-type').value;
+  const org = document.getElementById('post-org').value.trim();
+  if (!isClubVerified(org)) {
+    alert('Only verified clubs can post. Use one of the verified club names or enable Demo: Verify Club.');
+    return;
+  }
+
   const user = getCurrentUser();
   const payload = {
-    id: `evt-${Date.now()}`,
-    type,
-    org: document.getElementById('post-org').value.trim(),
+    id: `club-${Date.now()}`,
+    type: 'club',
+    org,
+    verified: true,
     title: document.getElementById('post-title').value.trim(),
     date: document.getElementById('post-date').value.trim(),
     time: document.getElementById('post-time').value.trim(),
@@ -252,33 +363,59 @@ function submitPost(event) {
     createdAt: Date.now()
   };
 
-  if (type === 'club') {
-    payload.verified = isVerifiedClub();
-    if (!payload.verified) {
-      alert('Only verified clubs can post to the newsletter. Enable demo verified mode in admin toggle.');
-      return;
-    }
-  } else {
-    payload.activityType = document.getElementById('post-activity').value.trim();
-    payload.spots = parseInt(document.getElementById('post-spots').value, 10) || 10;
-    payload.skillLevel = document.getElementById('post-skill').value;
-    payload.org = `${payload.activityType} — ${payload.location}`;
-  }
-
-  events.unshift(payload);
-  saveEvents();
+  clubEvents.unshift(payload);
+  saveClubEvents();
   closePostModal();
   renderFeed();
 }
 
 /**
- * Toggles demo admin verified-club status for posting.
+ * Submits the inline Sports & Hobbies form and prepends a new event card.
+ */
+function submitSportsPost(event) {
+  event.preventDefault();
+  const user = getCurrentUser();
+  const activity = document.getElementById('sport-activity').value.trim();
+  const dateRaw = document.getElementById('sport-date').value;
+  const timeRaw = document.getElementById('sport-time').value;
+  const location = document.getElementById('sport-location').value.trim() || 'UCalgary campus';
+  const spots = Math.min(20, Math.max(1, parseInt(document.getElementById('sport-spots').value, 10) || 10));
+  const skillLevel = document.getElementById('sport-skill').value;
+
+  const payload = {
+    id: `sport-${Date.now()}`,
+    type: 'sport',
+    activity,
+    activityType: activity,
+    org: `${activity} — ${location}`,
+    title: `${activity} Pull Up`,
+    date: formatDisplayDate(dateRaw),
+    time: formatDisplayTime(timeRaw),
+    location,
+    description: `${activity} on campus. Skill level: ${skillLevel}.`,
+    spots,
+    skillLevel,
+    attendees: [user.name],
+    createdAt: Date.now()
+  };
+
+  sportsEvents.unshift(payload);
+  saveSportsEvents();
+  document.getElementById('sports-post-form').reset();
+  document.getElementById('sport-location').value = 'UCalgary campus';
+  document.getElementById('sport-spots').value = '10';
+  renderFeed();
+}
+
+/**
+ * Toggles demo admin verified-club status for posting any club name.
  */
 function toggleAdminVerified() {
   const on = localStorage.getItem(STORAGE_VERIFIED) === 'true';
   localStorage.setItem(STORAGE_VERIFIED, on ? 'false' : 'true');
   const label = document.getElementById('admin-verified-label');
   if (label) label.textContent = on ? 'Demo: Verify Club (off)' : 'Demo: Verify Club (on)';
+  renderFeed();
 }
 
 /**
@@ -289,9 +426,9 @@ function bindEvents() {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 
-  document.getElementById('post-club-btn')?.addEventListener('click', () => openPostModal('club'));
-  document.getElementById('post-sport-btn')?.addEventListener('click', () => openPostModal('sport'));
-  document.getElementById('post-form')?.addEventListener('submit', submitPost);
+  document.getElementById('post-club-btn')?.addEventListener('click', openPostModal);
+  document.getElementById('post-form')?.addEventListener('submit', submitClubPost);
+  document.getElementById('sports-post-form')?.addEventListener('submit', submitSportsPost);
   document.querySelector('[data-close-modal="post-modal"]')?.addEventListener('click', closePostModal);
   document.getElementById('admin-verified-toggle')?.addEventListener('click', toggleAdminVerified);
 

@@ -139,6 +139,44 @@
   font-size: 0.75rem;
 }
 
+.community-section {
+  margin-bottom: var(--space-xl);
+}
+
+.community-section__title {
+  font-size: 1.375rem;
+  margin-bottom: var(--space-xs);
+}
+
+.community-section__sub {
+  font-size: 0.875rem;
+  margin-bottom: var(--space-md);
+}
+
+.feed-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.sports-post-form {
+  margin-top: var(--space-md);
+}
+
+.sports-post-form__heading {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  margin-bottom: var(--space-md);
+}
+
+.event-card__org-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

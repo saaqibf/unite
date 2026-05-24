@@ -52,8 +52,9 @@ function getCurrentUser() {
 function userHasNoCar() {
   try {
     const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
-    if (profile.hasCar === false || profile.has_car === false) return true;
-    if (profile.hasCar === 'No' || profile.has_car === 'no') return true;
+    if (!profile.has_car && profile.has_car !== true) return true;
+    if (profile.has_car === false || profile.has_car === 'no') return true;
+    if (profile.hasCar === false || profile.hasCar === 'No') return true;
   } catch {
     /* ignore */
   }
@@ -61,16 +62,29 @@ function userHasNoCar() {
 }
 
 /**
- * Reads upcoming course codes from Course Compass cross-feature hook.
+ * Reads upcoming course codes from Course Compass (empty if not set).
  */
 function getUpcomingCourses() {
   try {
     const raw = localStorage.getItem('unite_upcoming_courses');
-    if (raw) return JSON.parse(raw);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    /* ignore */
+    return [];
   }
-  return ['CPSC 331', 'MATH 271'];
+}
+
+/**
+ * Returns true when listing title/description matches an upcoming course code.
+ */
+function listingMatchesCourses(item, courses) {
+  if (!courses.length) return false;
+  const hay = `${item.title} ${item.description} ${(item.courseTags || []).join(' ')}`.toUpperCase();
+  return courses.some((code) => {
+    const normalized = String(code).toUpperCase().replace(/\s+/g, ' ');
+    return hay.includes(normalized);
+  });
 }
 
 /**
@@ -370,19 +384,24 @@ function renderGrid() {
  */
 function renderCourseSuggestions() {
   const courses = getUpcomingCourses();
-  const all = getLocalListings().length ? getLocalListings() : listings.length ? listings : getSeedListings();
-  const matches = all.filter((item) => {
-    if (item.category !== 'Textbooks' && !(item.courseTags && item.courseTags.length)) return false;
-    const hay = `${item.title} ${item.description} ${(item.courseTags || []).join(' ')}`.toUpperCase();
-    return courses.some((code) => hay.includes(String(code).toUpperCase().replace(/\s+/g, ' ')));
-  });
-
   const section = document.getElementById('course-suggestions');
   const grid = document.getElementById('course-suggestions-grid');
-  if (!matches.length) {
+
+  if (!courses.length) {
     section.hidden = true;
+    grid.innerHTML = '';
     return;
   }
+
+  const all = getLocalListings().length ? getLocalListings() : listings.length ? listings : getSeedListings();
+  const matches = all.filter((item) => listingMatchesCourses(item, courses));
+
+  if (!matches.length) {
+    section.hidden = true;
+    grid.innerHTML = '';
+    return;
+  }
+
   section.hidden = false;
   grid.innerHTML = matches
     .slice(0, 6)
@@ -394,7 +413,7 @@ function renderCourseSuggestions() {
             ${img ? `<img class="marketplace-card__img" src="${escapeHtml(img)}" alt="">` : ''}
           </div>
           <div class="marketplace-card__body">
-            <p class="marketplace-card__program-label">Someone in your program is selling this</p>
+            <p class="marketplace-card__program-label">Someone in your program is selling this 🎓</p>
             <p class="marketplace-card__price">${escapeHtml(formatPrice(item.price))}</p>
             <h3 class="marketplace-card__title">${escapeHtml(item.title)}</h3>
           </div>
@@ -784,14 +803,16 @@ function debounce(fn, wait) {
 }
 
 /**
- * Applies default campus-pickup filter when user has no car from onboarding.
+ * Applies cross-feature defaults from Course Compass and onboarding profile at load.
  */
-function applySmartDefaults() {
-  if (userHasNoCar()) {
+function applyCrossFeatureDefaults() {
+  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  if (!profile.has_car || profile.has_car === false || profile.has_car === 'no' || profile.hasCar === false || profile.hasCar === 'No') {
     const chip = document.getElementById('campus-pickup-chip');
     chip.classList.add('filter-chip--active');
     chip.setAttribute('aria-pressed', 'true');
   }
+  renderCourseSuggestions();
 }
 
 /**
@@ -801,7 +822,7 @@ async function init() {
   if (!getLocalListings().length) {
     persistListingsLocal(getSeedListings());
   }
-  applySmartDefaults();
+  applyCrossFeatureDefaults();
   bindEvents();
   initPhotoUpload();
   await refreshBrowse();

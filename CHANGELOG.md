@@ -1,5 +1,11 @@
 # UNite Changelog
 
+## [0.4.0] — Hour 2 — Primel (Pair B)
+- Sports & Hobbies inline post form (`unite_sports_events` localStorage)
+- Verified club badges for 3 hardcoded UCalgary clubs (gold checkmark)
+- Cross-feature marketplace: `unite_upcoming_courses` + `has_car` profile defaults
+- AI judge screenshots: `03-marketplace.png`, `04-community.png`
+
 ## [0.3.0] — Hour 1–2 — Primel (Pair B)
 - Marketplace page: browse grid, filters, campus pickup default, list form, interest DM, mark sold
 - Marketplace API (`/api/marketplace`) with in-memory/PostgreSQL listings and Cloudinary upload route
