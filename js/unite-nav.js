@@ -74,29 +74,31 @@ function updateNavForLoggedInUser() {
   const navRight = document.getElementById('nav-right-inner');
   if (!navRight) return;
 
+  const displayName = user.display_name || firstName;
+  const programTag = program ? `<span style="display:inline-block;font-size:11px;font-weight:600;background:#FFCD00;color:#000;padding:2px 10px;border-radius:999px;margin-top:4px;">${program}${year ? ` · ${year}` : ''}</span>` : '';
+
   navRight.innerHTML = `
-    <div class="profile-menu-wrapper" id="profile-menu-wrapper" style="position:relative;">
-      <button class="profile-trigger" onclick="toggleProfileMenu(event)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:999px;padding:6px 14px 6px 6px;cursor:pointer;color:white;font-family:inherit;font-size:14px;font-weight:600;line-height:1;">
-        <div class="profile-avatar-small" style="width:28px;height:28px;border-radius:50%;background:#CC0033;color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${avatarLetter}</div>
+    <div id="profile-menu-wrapper" style="position:relative;">
+      <button onclick="toggleProfileMenu(event)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:999px;padding:5px 14px 5px 5px;cursor:pointer;color:white;font-family:inherit;font-size:14px;font-weight:600;line-height:1.2;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#CC0033;color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${avatarLetter}</div>
         <span>${firstName}</span>
-        <span style="font-size:10px;opacity:0.7;margin-left:2px;">▾</span>
+        <span style="font-size:10px;opacity:0.65;">▾</span>
       </button>
-      <div class="profile-dropdown" id="profile-dropdown" style="display:none;">
-        <div class="profile-dropdown-header">
-          <div class="profile-dropdown-avatar">${avatarLetter}</div>
-          <div class="profile-dropdown-info">
-            <strong>${user.display_name || firstName}</strong>
-            <span>${user.email || ''}</span>
-            ${program ? `<span class="profile-program-tag">${program}${year ? ` · ${year}` : ''}</span>` : ''}
+      <div id="profile-dropdown" style="display:none;position:absolute;top:calc(100% + 10px);right:0;background:white;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2);min-width:260px;z-index:500;overflow:hidden;border:1px solid #f0f0f0;">
+        <div style="display:flex;align-items:center;gap:12px;padding:16px;background:#f8f8f8;">
+          <div style="width:44px;height:44px;border-radius:50%;background:#CC0033;color:white;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;">${avatarLetter}</div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <strong style="font-size:15px;color:#0a0a0a;">${displayName}</strong>
+            ${programTag}
           </div>
         </div>
-        <div class="profile-dropdown-divider"></div>
-        <a class="profile-dropdown-item" href="/features/course-compass.html">🧭 Course Compass</a>
-        <a class="profile-dropdown-item" href="/features/marketplace.html">🛒 Marketplace</a>
-        <a class="profile-dropdown-item" href="/features/community.html">🤝 Community</a>
-        <div class="profile-dropdown-divider"></div>
-        <button class="profile-dropdown-item" onclick="openProfileSettings()">⚙️ Edit Profile & Preferences</button>
-        <button class="profile-dropdown-item danger" onclick="signOut()">🚪 Sign Out</button>
+        <div style="height:1px;background:#f0f0f0;"></div>
+        <a href="/features/course-compass.html" style="display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:14px;color:#0a0a0a;text-decoration:none;">🧭 Course Compass</a>
+        <a href="/features/marketplace.html"    style="display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:14px;color:#0a0a0a;text-decoration:none;">🛒 Marketplace</a>
+        <a href="/features/community.html"      style="display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:14px;color:#0a0a0a;text-decoration:none;">🤝 Community</a>
+        <div style="height:1px;background:#f0f0f0;"></div>
+        <button onclick="openProfileSettings()" style="display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:14px;color:#0a0a0a;background:none;border:none;width:100%;text-align:left;cursor:pointer;">⚙️ Edit Profile &amp; Preferences</button>
+        <button onclick="signOut()"             style="display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:14px;color:#CC0033;background:none;border:none;width:100%;text-align:left;cursor:pointer;">🚪 Sign Out</button>
       </div>
     </div>`;
 
