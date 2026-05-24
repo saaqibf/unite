@@ -673,6 +673,19 @@
    * Starts the onboarding flow when the page loads.
    */
   function init() {
+    var params = new URLSearchParams(window.location.search);
+    var demoScreen = params.get('screen');
+
+    if (demoScreen === 'program') {
+      localStorage.setItem(INTENT_KEY, 'marketplace');
+      profile.primary_intent = 'marketplace';
+      profile.email = 'mousa@ucalgary.ca';
+      profile.name = 'Mousa';
+      currentScreen = 3;
+      renderScreen();
+      return;
+    }
+
     if (!profile.primary_intent) {
       window.location.href = '/';
       return;
