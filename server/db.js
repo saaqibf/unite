@@ -42,7 +42,11 @@ async function initDB() {
       id          SERIAL PRIMARY KEY,
       email       VARCHAR(255) UNIQUE NOT NULL,
       password    VARCHAR(255) NOT NULL,
-      name        VARCHAR(100),
+      name        VARCHAR(200),
+      first_name  VARCHAR(100),
+      last_name   VARCHAR(100),
+      display_name VARCHAR(200),
+      initials    VARCHAR(5),
       program     VARCHAR(100),
       year        VARCHAR(20),
       has_car     BOOLEAN DEFAULT false,
@@ -92,6 +96,28 @@ async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+
+  // Add name-extraction columns to existing databases that predate this migration
+  await p.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name   VARCHAR(100);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name    VARCHAR(100);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(200);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS initials     VARCHAR(5);
+  `);
+
+  // Back-fill name columns for any existing users who registered before this migration
+  await p.query(`
+    UPDATE users SET
+      first_name   = INITCAP(SPLIT_PART(SPLIT_PART(email, '@', 1), '.', 1)),
+      last_name    = INITCAP(SPLIT_PART(SPLIT_PART(email, '@', 1), '.', 2)),
+      display_name = INITCAP(SPLIT_PART(SPLIT_PART(email, '@', 1), '.', 1))
+                     || ' ' ||
+                     INITCAP(SPLIT_PART(SPLIT_PART(email, '@', 1), '.', 2)),
+      initials     = UPPER(LEFT(SPLIT_PART(SPLIT_PART(email, '@', 1), '.', 1), 1))
+                     || UPPER(LEFT(SPLIT_PART(SPLIT_PART(email, '@', 1), '.', 2), 1))
+    WHERE first_name IS NULL OR first_name = ''
+  `);
+
   console.log('Database tables ready');
 
   // Seed demo listings if the marketplace is empty

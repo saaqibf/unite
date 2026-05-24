@@ -13,6 +13,21 @@ function isUCalgaryEmail(email) {
   return typeof email === 'string' && email.toLowerCase().endsWith('@ucalgary.ca');
 }
 
+/**
+ * Extracts a student's first name, last name, display name, and initials from their
+ * UCalgary email address (e.g. saaqib.fagbenro@ucalgary.ca -> Saaqib Fagbenro).
+ */
+function extractNameFromEmail(email) {
+  const local = email.toLowerCase().split('@')[0]; // e.g. "saaqib.fagbenro"
+  const parts = local.split('.');
+  const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  const firstName = cap(parts[0] || '');
+  const lastName = cap(parts[1] || '');
+  const displayName = [firstName, lastName].filter(Boolean).join(' ');
+  const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase().replace(/\s/g, '');
+  return { firstName, lastName, displayName, initials };
+}
+
 // Generates a signed JWT access token that expires in 7 days
 function generateAccessToken(user) {
   return jwt.sign(
@@ -76,7 +91,12 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
     const verifyToken = crypto.randomBytes(32).toString('hex');
 
-    let user = { id: null, email: email.toLowerCase(), name: name || null };
+    // Always derive structured name fields from the UCalgary email address
+    const { firstName, lastName, displayName, initials } = extractNameFromEmail(email);
+    // Fall back to client-supplied name only if email extraction produced nothing
+    const resolvedName = displayName || name || null;
+
+    let user = { id: null, email: email.toLowerCase(), name: resolvedName, first_name: firstName, last_name: lastName, display_name: displayName, initials };
 
     try {
       // Hard 4-second timeout on all DB operations — fail fast instead of hanging
@@ -88,9 +108,10 @@ router.post('/register', async (req, res) => {
       }
 
       const result = await query(
-        `INSERT INTO users (email, password, name, primary_intent, verify_token)
-         VALUES ($1, $2, $3, $4, $5) RETURNING id, email, name`,
-        [email.toLowerCase(), hashedPassword, name || null, primaryIntent || null, verifyToken]
+        `INSERT INTO users (email, password, name, first_name, last_name, display_name, initials, primary_intent, verify_token)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id, email, name, first_name, last_name, display_name, initials`,
+        [email.toLowerCase(), hashedPassword, resolvedName, firstName, lastName, displayName, initials, primaryIntent || null, verifyToken]
       );
       user = result.rows[0];
 
@@ -106,7 +127,16 @@ router.post('/register', async (req, res) => {
     res.status(201).json({
       message: 'Account created! Welcome to UNite.',
       token,
-      user: { id: user.id, email: user.email, name: user.name }
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        display_name: user.display_name,
+        initials: user.initials
+      },
+      needs_onboarding: true
     });
   } catch (err) {
     console.error('Register error:', err);
@@ -161,6 +191,10 @@ router.post('/login', async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        display_name: user.display_name,
+        initials: user.initials,
         program: user.program,
         year: user.year,
         verified: user.verified,
@@ -226,7 +260,7 @@ router.get('/me', auth, async (req, res) => {
 
   try {
     const result = await query(
-      'SELECT id, email, name, program, year, has_car, living, challenge, personality, interests, primary_intent, needed_courses, verified FROM users WHERE id = $1',
+      'SELECT id, email, name, first_name, last_name, display_name, initials, program, year, has_car, living, challenge, personality, interests, primary_intent, needed_courses, verified FROM users WHERE id = $1',
       [req.user.id]
     );
     if (result.rows.length === 0) {

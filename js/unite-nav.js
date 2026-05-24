@@ -31,8 +31,10 @@ function injectNav(activePage) {
    * Shows student name in nav if they already completed onboarding.
    */
   const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
-  if (profile.name) {
-    document.getElementById('nav-user-display').textContent = profile.name;
+  // Prefer first_name extracted from email; fall back to whatever name we have
+  const greetingName = profile.first_name || (profile.name ? profile.name.split(' ')[0] : '');
+  if (greetingName) {
+    document.getElementById('nav-user-display').textContent = 'Hi, ' + greetingName + ' \uD83D\uDC4B';
     document.getElementById('nav-cta-btn').style.display = 'none';
   }
 

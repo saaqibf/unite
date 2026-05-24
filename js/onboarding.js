@@ -117,11 +117,67 @@
       localStorage.setItem('unite_token', data.token);
     }
     var user = data.user || {};
+
+    // If the server returned structured name fields, prefer those over the locally-typed name
+    var resolvedName = user.display_name || user.name || profile.name || '';
+    var resolvedFirst = user.first_name || (resolvedName ? resolvedName.split(' ')[0] : '');
+
     localStorage.setItem('unite_profile', JSON.stringify(
-      Object.assign({ email: email, primary_intent: profile.primary_intent, name: profile.name || '' }, user)
+      Object.assign(
+        { email: email, primary_intent: profile.primary_intent, name: resolvedName },
+        user,
+        // Guarantee these keys are always present in the profile object
+        { display_name: resolvedName, first_name: resolvedFirst }
+      )
     ));
+
+    // Also persist the raw user object separately so chat.js can read it
+    localStorage.setItem('unite_user', JSON.stringify(user));
+
     if (data.userId) localStorage.setItem('unite_user_id', String(data.userId));
     if (user.id) localStorage.setItem('unite_user_id', String(user.id));
+  }
+
+  /**
+   * Handles a successful registration response — saves session, pre-fills name from email,
+   * then routes to the onboarding questions if the profile is not yet complete.
+   */
+  function handleRegistrationSuccess(data, email) {
+    // Save token
+    if (data.token) {
+      localStorage.setItem('unite_token', data.token);
+    }
+
+    // Save structured user object
+    var user = data.user || {};
+    localStorage.setItem('unite_user', JSON.stringify({
+      id: user.id || null,
+      email: user.email || email,
+      display_name: user.display_name || user.name || email.split('@')[0],
+      first_name: user.first_name || email.split('@')[0].split('.')[0],
+      last_name: user.last_name || '',
+      initials: user.initials || email.charAt(0).toUpperCase()
+    }));
+
+    // Derive first name from email (e.g. saaqib.fagbenro@ucalgary.ca → "Saaqib")
+    var emailLocal = email.split('@')[0];
+    var parts = emailLocal.split('.');
+    var firstName = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : '';
+    if (!profile.name) profile.name = firstName;
+
+    // Check if profile is already complete — if so, skip onboarding
+    var existingProfile = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+    if (!existingProfile.program) {
+      // Profile not complete — go to Q1 (name screen), pre-filling name from email
+      localStorage.setItem(PROFILE_KEY, JSON.stringify({
+        name: profile.name,
+        email: email,
+        primary_intent: profile.primary_intent
+      }));
+      showScreen(3); // screen 3 = Q1 "What is your name?"
+    } else {
+      redirectToFeature();
+    }
   }
 
   /**
@@ -136,8 +192,7 @@
       }, 5000);
 
       if (result.ok) {
-        saveAuthResult(result.data, email);
-        showScreen(2);
+        handleRegistrationSuccess(result.data, email);
         return;
       }
 
@@ -152,10 +207,15 @@
       // Server timeout or network error — issue demo token so judges can proceed
       console.warn('Register unavailable, using demo mode');
       localStorage.setItem('unite_token', 'demo-' + Date.now());
-      localStorage.setItem('unite_profile', JSON.stringify(
-        { email: email, primary_intent: profile.primary_intent, name: profile.name || '' }
+      // Pre-fill name from email for Q1
+      var emailLocal = email.split('@')[0];
+      var parts = emailLocal.split('.');
+      var firstName = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : '';
+      if (!profile.name) profile.name = firstName;
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(
+        { email: email, primary_intent: profile.primary_intent, name: profile.name }
       ));
-      showScreen(2);
+      showScreen(3); // Go to Q1 even in offline/demo mode
     }
   }
 
@@ -360,7 +420,7 @@
           '<button type="button" id="email-continue" class="btn-primary btn-block" disabled>' +
             (startLogin ? 'Log In' : 'Create Account') +
           '</button>' +
-          '<button type="button" id="demo-skip-btn" style="margin-top:10px;width:100%;background:transparent;border:1.5px solid var(--color-border,#e5e7eb);color:var(--color-text-muted,#6b7280);border-radius:8px;padding:10px;cursor:pointer;font-size:0.875rem;" onclick="(function(){localStorage.setItem(\'unite_token\',\'demo-\'+Date.now());localStorage.setItem(\'unite_profile\',JSON.stringify({name:\'Sarah\',program:\'Computer Science\',year:\'1\',has_car:false,housing:\'On campus\',challenge:\'Planning my degree\',personality:\'Introvert\',interests:[\'Tech\',\'Study Groups\'],primary_intent:\'course_compass\',needed_courses:[\'CPSC331\',\'MATH271\']}));window.location.href=\'/features/course-compass.html\';})()">' +
+          '<button type="button" id="demo-skip-btn" style="margin-top:10px;width:100%;background:transparent;border:1.5px solid var(--color-border,#e5e7eb);color:var(--color-text-muted,#6b7280);border-radius:8px;padding:10px;cursor:pointer;font-size:0.875rem;">' +
             '⚡ Skip for Demo →' +
           '</button>' +
         '</footer>' +
@@ -449,6 +509,25 @@
 
     document.getElementById('tab-signup').addEventListener('click', function () { switchTab(false); });
     document.getElementById('tab-login').addEventListener('click',  function () { switchTab(true); });
+
+    // Skip for Demo — sets a demo token and goes to Q1 so judges see the full onboarding flow
+    document.getElementById('demo-skip-btn').addEventListener('click', function () {
+      localStorage.setItem('unite_token', 'demo-' + Date.now());
+      localStorage.setItem('unite_user', JSON.stringify({
+        id: 'demo',
+        email: 'demo@ucalgary.ca',
+        display_name: 'Demo Student',
+        first_name: 'Demo',
+        last_name: 'Student',
+        initials: 'DS'
+      }));
+      localStorage.setItem(PROFILE_KEY, JSON.stringify({
+        name: 'Demo',
+        email: 'demo@ucalgary.ca',
+        primary_intent: profile.primary_intent || 'course_compass'
+      }));
+      showScreen(3); // Go to Q1 "What is your name?" — still shows full 8-question onboarding
+    });
 
     continueBtn.addEventListener('click', function () {
       if (!isUcalgaryEmail(emailInput.value)) return;

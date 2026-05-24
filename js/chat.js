@@ -9,6 +9,18 @@ function getInitials(name) {
 }
 
 /**
+ * Formats a full name as "First L." to save horizontal space in chat
+ * (e.g. "Saaqib Fagbenro" -> "Saaqib F.").
+ * If only one word is present it is returned as-is.
+ */
+function getChatName(name) {
+  if (!name) return 'Unknown';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return parts[0] + ' ' + parts[parts.length - 1].charAt(0) + '.';
+}
+
+/**
  * Picks a consistent avatar background color based on the user's name.
  */
 function getAvatarColor(name) {
@@ -49,78 +61,90 @@ function scrollToLatestMessage() {
 }
 
 /**
- * Renders a single chat message bubble into the messages container.
+ * Renders a chat message bubble — right side for you, left side for others.
  */
-function renderMessage(data, currentUser) {
-  const container = document.getElementById('chat-messages');
-  if (!container) return;
+function renderMessage(data) {
+  const messages = document.getElementById('chat-messages') ||
+                   document.querySelector('.chat-messages') ||
+                   document.querySelector('#messages');
+  if (!messages) return;
 
-  const isMine = currentUser && data.user === currentUser.name;
-  const wrapper = document.createElement('div');
-  wrapper.className = `chat-message ${isMine ? 'chat-message--mine' : 'chat-message--theirs'}`;
+  const currentUser = JSON.parse(localStorage.getItem('unite_user') || '{}');
+  const currentProfile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+  // Prefer display_name as the canonical identity — matches what sendMessage stores in data.user
+  const currentName = currentUser.display_name || currentProfile.display_name ||
+                      currentProfile.name || currentUser.first_name || '';
+  const isOwn = !!data.user && (
+    data.user === currentName ||
+    data.user === currentUser.display_name ||
+    data.user === currentProfile.name ||
+    data.user === currentUser.first_name
+  );
 
-  const avatarColor = getAvatarColor(data.user);
-  const initials = getInitials(data.user);
-  const timeStr = formatTimestamp(data.timestamp);
+  const programShort = {
+    'Computer Science': 'CS', 'Software Engineering': 'SENG',
+    'Electrical Engineering': 'ENGG', 'Business': 'BUS',
+    'Kinesiology': 'KNES', 'Psychology': 'PSYC',
+    'Nursing': 'NURS', 'Biological Sciences': 'BIO'
+  };
 
-  const avatar = document.createElement('div');
-  avatar.className = 'chat-avatar';
-  avatar.style.backgroundColor = avatarColor;
-  avatar.textContent = initials;
-  avatar.setAttribute('aria-hidden', 'true');
+  const time = new Date(data.timestamp || Date.now()).toLocaleTimeString([], {
+    hour: '2-digit', minute: '2-digit'
+  });
 
-  const body = document.createElement('div');
+  const initials = (data.user || 'S').split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2);
+  const programBadge = data.program ? (programShort[data.program] || data.program) : 'UCalgary';
+  const yearBadge = data.year ? ` · Y${data.year}` : '';
 
-  const meta = document.createElement('div');
-  meta.className = 'chat-meta';
+  const div = document.createElement('div');
+  div.className = `chat-message ${isOwn ? 'own-message' : 'other-message'}`;
 
-  const nameEl = document.createElement('span');
-  nameEl.className = 'chat-name';
-  nameEl.textContent = data.user;
-  meta.appendChild(nameEl);
-
-  if (data.program) {
-    const tag = document.createElement('span');
-    tag.className = 'tag';
-    tag.textContent = data.program;
-    meta.appendChild(tag);
-  }
-
-  const timeEl = document.createElement('span');
-  timeEl.className = 'chat-timestamp';
-  timeEl.textContent = timeStr;
-  meta.appendChild(timeEl);
-
-  const bubble = document.createElement('div');
-  bubble.className = 'chat-bubble';
-  bubble.textContent = data.text;
-
-  body.appendChild(meta);
-  body.appendChild(bubble);
-
-  if (isMine) {
-    wrapper.appendChild(body);
-    wrapper.appendChild(avatar);
+  if (isOwn) {
+    div.innerHTML = `
+      <div class="message-row message-row-own">
+        <div class="message-content-own">
+          <div class="message-time">${time}</div>
+          <div class="message-bubble own-bubble">${escapeHtml(data.text)}</div>
+        </div>
+      </div>`;
   } else {
-    wrapper.appendChild(avatar);
-    wrapper.appendChild(body);
+    div.innerHTML = `
+      <div class="message-row message-row-other">
+        <div class="message-avatar-circle">${initials}</div>
+        <div class="message-content-other">
+          <div class="message-meta">
+            <span class="message-name">${escapeHtml(getChatName(data.user) || 'Student')}</span>
+            <span class="message-badge">${escapeHtml(programBadge)}${escapeHtml(yearBadge)}</span>
+            <span class="message-time">${time}</span>
+          </div>
+          <div class="message-bubble other-bubble">${escapeHtml(data.text)}</div>
+        </div>
+      </div>`;
   }
 
-  container.appendChild(wrapper);
-  scrollToLatestMessage();
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
 }
 
 /**
  * Sends a new chat message to the backend and clears the input field.
+ * Identity (name/program/year) is pulled from localStorage so bubbles
+ * align correctly for the signed-in student.
  */
-async function sendMessage(text, currentUser) {
+async function sendMessage(text) {
   const trimmed = (text || '').trim();
   if (!trimmed) return;
 
+  const currentUser = JSON.parse(localStorage.getItem('unite_user') || '{}');
+  const profile = JSON.parse(localStorage.getItem('unite_profile') || '{}');
+
   const payload = {
     text: trimmed,
-    user: currentUser.name,
-    program: currentUser.program
+    // Use display_name ("Saaqib Fagbenro") so getChatName can format it as "Saaqib F." for others
+    user: currentUser.display_name || profile.display_name || profile.name || currentUser.first_name || 'Student',
+    program: profile.program || '',
+    year: profile.year || '',
+    timestamp: new Date().toISOString()
   };
 
   try {
@@ -130,17 +154,13 @@ async function sendMessage(text, currentUser) {
       body: JSON.stringify(payload)
     });
 
+    // If the server can't broadcast (e.g. Pusher not configured), still show
+    // the message locally so the sender sees their own bubble.
     if (!res.ok) {
-      renderMessage(
-        Object.assign({}, payload, { timestamp: new Date().toISOString() }),
-        currentUser
-      );
+      renderMessage(payload);
     }
   } catch {
-    renderMessage(
-      Object.assign({}, payload, { timestamp: new Date().toISOString() }),
-      currentUser
-    );
+    renderMessage(payload);
   }
 }
 
@@ -175,7 +195,7 @@ async function initChat(config) {
   const pusherCfg = await loadPusherConfig(config);
   const pusherKey = pusherCfg.pusherKey;
   const pusherCluster = pusherCfg.pusherCluster;
-  const { currentUser, onlineCount } = config;
+  const { onlineCount } = config;
   const messagesEl = document.getElementById('chat-messages');
   const form = document.getElementById('chat-form');
   const input = document.getElementById('chat-input');
@@ -187,7 +207,7 @@ async function initChat(config) {
 
   if (messagesEl && config.seedMessages) {
     config.seedMessages.forEach(function(msg) {
-      renderMessage(msg, currentUser);
+      renderMessage(msg);
     });
   }
 
@@ -195,7 +215,7 @@ async function initChat(config) {
     const pusher = new Pusher(pusherKey, { cluster: pusherCluster || 'mt1' });
     const channel = pusher.subscribe('unite-global-chat');
     channel.bind('new-message', function(data) {
-      renderMessage(data, currentUser);
+      renderMessage(data);
     });
   }
 
@@ -204,7 +224,7 @@ async function initChat(config) {
       e.preventDefault();
       const text = input.value;
       input.value = '';
-      sendMessage(text, currentUser);
+      sendMessage(text);
     });
   }
 }
