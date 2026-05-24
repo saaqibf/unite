@@ -1,0 +1,434 @@
+{
+  "programs": [
+    {
+      "key": "cs",
+      "name": "Bachelor of Science — Computer Science",
+      "short_name": "Computer Science",
+      "faculty": "Faculty of Science",
+      "degree": "B.Sc.",
+      "total_credits": 120,
+      "min_gpa": 2.0,
+      "description": "The CS program at UCalgary covers algorithms, systems, AI, software design, and theory. Students graduate ready for software engineering, research, or graduate school.",
+      "year_breakdown": {
+        "year_1": ["CPSC217", "CPSC231", "MATH211", "MATH249", "STAT205"],
+        "year_2": ["CPSC233", "CPSC251", "CPSC331", "CPSC355", "MATH271", "STAT213"],
+        "year_3": ["CPSC335", "CPSC351", "CPSC359", "CPSC383", "CPSC457"],
+        "year_4": ["CPSC471", "CPSC481", "CPSC491", "CPSC499"]
+      },
+      "core_required": [
+        "CPSC217",
+        "CPSC231",
+        "CPSC233",
+        "CPSC251",
+        "CPSC331",
+        "CPSC335",
+        "CPSC351",
+        "CPSC355",
+        "CPSC359",
+        "CPSC383",
+        "CPSC457",
+        "MATH211",
+        "MATH249",
+        "MATH271",
+        "STAT213"
+      ],
+      "depth_courses": [
+        "CPSC313",
+        "CPSC319",
+        "CPSC365",
+        "CPSC393",
+        "CPSC411",
+        "CPSC413",
+        "CPSC418",
+        "CPSC433",
+        "CPSC441",
+        "CPSC449",
+        "CPSC453",
+        "CPSC471",
+        "CPSC481",
+        "CPSC491"
+      ],
+      "elective_areas": [
+        "Artificial Intelligence",
+        "Computer Networks",
+        "Computer Graphics",
+        "Human-Computer Interaction",
+        "Database Systems",
+        "Security",
+        "Algorithms",
+        "Systems"
+      ],
+      "general_requirements": {
+        "credits_required": 120,
+        "upper_division_min": 48,
+        "science_breadth": ["MATH211", "MATH249", "STAT213"],
+        "communication": "One approved writing course required",
+        "notes": "Students must maintain a minimum 2.0 GPA to continue in the program. At least 48 units must be at the 300-level or above."
+      },
+      "typical_prereq_chains": [
+        {
+          "chain_name": "Core CS Sequence",
+          "courses": ["CPSC217", "CPSC231", "CPSC233", "CPSC331", "CPSC457"]
+        },
+        {
+          "chain_name": "Systems Sequence",
+          "courses": ["CPSC251", "CPSC355", "CPSC359", "CPSC457"]
+        },
+        {
+          "chain_name": "Theory Sequence",
+          "courses": ["MATH271", "CPSC335", "CPSC365", "CPSC413"]
+        }
+      ]
+    },
+    {
+      "key": "seng",
+      "name": "Bachelor of Science — Software Engineering",
+      "short_name": "Software Engineering",
+      "faculty": "Schulich School of Engineering",
+      "degree": "B.Sc.",
+      "total_credits": 120,
+      "min_gpa": 2.0,
+      "description": "Software Engineering combines CS fundamentals with engineering discipline: design, testing, project management, and professional practice. Accredited by Engineers Canada.",
+      "year_breakdown": {
+        "year_1": ["CPSC217", "CPSC231", "ENGG200", "ENGG202", "MATH211", "MATH249"],
+        "year_2": ["CPSC233", "CPSC251", "CPSC331", "SENG300", "MATH271", "ENGG225"],
+        "year_3": ["CPSC355", "CPSC457", "SENG401", "SENG437", "SENG438"],
+        "year_4": ["SENG471", "SENG499"]
+      },
+      "core_required": [
+        "CPSC217",
+        "CPSC231",
+        "CPSC233",
+        "CPSC251",
+        "CPSC331",
+        "CPSC355",
+        "CPSC457",
+        "SENG300",
+        "SENG401",
+        "SENG437",
+        "SENG438",
+        "SENG471",
+        "SENG499",
+        "ENGG200",
+        "ENGG202",
+        "MATH211",
+        "MATH249",
+        "MATH271"
+      ],
+      "depth_courses": [
+        "CPSC319",
+        "CPSC383",
+        "SENG511",
+        "SENG513",
+        "SENG515",
+        "SENG521",
+        "SENG523",
+        "SENG533",
+        "SENG541"
+      ],
+      "elective_areas": [
+        "Software Architecture",
+        "Distributed Systems",
+        "Embedded Systems",
+        "Security Engineering",
+        "Machine Learning",
+        "Mobile Applications"
+      ],
+      "general_requirements": {
+        "credits_required": 120,
+        "upper_division_min": 48,
+        "engineering_design": "Capstone project in SENG499 required",
+        "professional_practice": "ENGG200 Engineering Design and Communication required",
+        "notes": "Must maintain 2.0 GPA. Accredited program — Engineering Ethics and professionalism courses required."
+      },
+      "typical_prereq_chains": [
+        {
+          "chain_name": "Core CS Sequence",
+          "courses": ["CPSC217", "CPSC231", "CPSC233", "CPSC331"]
+        },
+        {
+          "chain_name": "Software Engineering Sequence",
+          "courses": ["SENG300", "SENG401", "SENG437", "SENG471", "SENG499"]
+        },
+        {
+          "chain_name": "Testing & Quality",
+          "courses": ["SENG300", "SENG438", "SENG513"]
+        }
+      ]
+    },
+    {
+      "key": "business",
+      "name": "Bachelor of Commerce — Haskayne School of Business",
+      "short_name": "Business (BCom)",
+      "faculty": "Haskayne School of Business",
+      "degree": "B.Comm.",
+      "total_credits": 120,
+      "min_gpa": 2.0,
+      "description": "The BCom at Haskayne prepares students for careers in accounting, finance, marketing, management, and entrepreneurship. AACSB accredited.",
+      "year_breakdown": {
+        "year_1": ["ACCT217", "ACCT323", "MGST217", "FNCE317", "STAT213"],
+        "year_2": ["ACCT341", "FNCE341", "MGST301", "MGST303", "FNCE343"],
+        "year_3": ["ACCT343", "FNCE443", "MGST391", "ACCT355"],
+        "year_4": ["MGST451", "MGST453", "ACCT421"]
+      },
+      "core_required": [
+        "ACCT217",
+        "ACCT323",
+        "ACCT341",
+        "FNCE317",
+        "FNCE341",
+        "FNCE343",
+        "MGST217",
+        "MGST301",
+        "MGST303",
+        "STAT213"
+      ],
+      "depth_courses": [
+        "ACCT343",
+        "ACCT355",
+        "ACCT357",
+        "ACCT359",
+        "ACCT361",
+        "FNCE443",
+        "FNCE445",
+        "FNCE447",
+        "FNCE451",
+        "MGST391",
+        "MGST451",
+        "MGST453",
+        "MGST571"
+      ],
+      "elective_areas": [
+        "Accounting",
+        "Finance",
+        "General Management",
+        "Entrepreneurship & Innovation",
+        "Supply Chain & Operations",
+        "Business Analytics",
+        "International Business"
+      ],
+      "general_requirements": {
+        "credits_required": 120,
+        "upper_division_min": 48,
+        "breadth": "Students must complete courses in accounting, finance, and management",
+        "capstone": "MGST451 Business Policy (Strategy) is the integrative capstone",
+        "notes": "Minimum 2.0 GPA required. Students select a major from: Accounting, Finance, General Management, Entrepreneurship, Supply Chain."
+      },
+      "typical_prereq_chains": [
+        {
+          "chain_name": "Accounting Stream",
+          "courses": ["ACCT217", "ACCT323", "ACCT341", "ACCT343", "ACCT421"]
+        },
+        {
+          "chain_name": "Finance Stream",
+          "courses": ["FNCE317", "FNCE341", "FNCE343", "FNCE443", "FNCE445"]
+        },
+        {
+          "chain_name": "Management Core",
+          "courses": ["MGST217", "MGST301", "MGST303", "MGST391", "MGST451"]
+        }
+      ]
+    },
+    {
+      "key": "kinesiology",
+      "name": "Bachelor of Science — Kinesiology",
+      "short_name": "Kinesiology",
+      "faculty": "Faculty of Kinesiology",
+      "degree": "B.Sc.",
+      "total_credits": 120,
+      "min_gpa": 2.0,
+      "description": "Kinesiology at UCalgary is one of Canada's top programs, covering human movement, sport science, biomechanics, exercise physiology, and health promotion.",
+      "year_breakdown": {
+        "year_1": ["KNES201", "KNES203", "KNES213", "KNES251", "KNES253"],
+        "year_2": ["KNES303", "KNES311", "KNES323", "KNES331", "KNES337", "KNES344"],
+        "year_3": ["KNES402", "KNES411", "KNES413", "KNES431", "KNES441", "KNES451"],
+        "year_4": ["KNES495", "KNES498", "KNES499"]
+      },
+      "core_required": [
+        "KNES201",
+        "KNES203",
+        "KNES213",
+        "KNES251",
+        "KNES253",
+        "KNES259",
+        "KNES303",
+        "KNES311",
+        "KNES323",
+        "KNES331",
+        "KNES337",
+        "KNES344",
+        "KNES355",
+        "KNES363",
+        "STAT213"
+      ],
+      "depth_courses": [
+        "KNES402",
+        "KNES411",
+        "KNES413",
+        "KNES431",
+        "KNES433",
+        "KNES437",
+        "KNES441",
+        "KNES443",
+        "KNES451",
+        "KNES460",
+        "KNES463",
+        "KNES465",
+        "KNES472",
+        "KNES475",
+        "KNES478",
+        "KNES485"
+      ],
+      "elective_areas": [
+        "Exercise Physiology",
+        "Biomechanics",
+        "Sport Psychology",
+        "Health Promotion",
+        "Athletic Therapy",
+        "Sport Management",
+        "Adapted Physical Activity"
+      ],
+      "general_requirements": {
+        "credits_required": 120,
+        "upper_division_min": 48,
+        "lab_requirement": "Multiple lab-based courses required throughout the program",
+        "practicum": "Practicum placement in Year 3 or 4 strongly recommended",
+        "notes": "Students choose a concentration: Exercise & Health Physiology, Biomechanics, or Sport & Exercise Psychology."
+      },
+      "typical_prereq_chains": [
+        {
+          "chain_name": "Physiology Stream",
+          "courses": ["KNES201", "KNES251", "KNES303", "KNES311", "KNES411"]
+        },
+        {
+          "chain_name": "Biomechanics Stream",
+          "courses": ["KNES203", "KNES253", "KNES323", "KNES331", "KNES431"]
+        },
+        {
+          "chain_name": "Psychology Stream",
+          "courses": ["KNES213", "KNES337", "KNES344", "KNES441", "KNES451"]
+        }
+      ]
+    },
+    {
+      "key": "psychology",
+      "name": "Bachelor of Science — Psychology",
+      "short_name": "Psychology",
+      "faculty": "Faculty of Arts",
+      "degree": "B.Sc.",
+      "total_credits": 120,
+      "min_gpa": 2.0,
+      "description": "Psychology at UCalgary covers biological, cognitive, developmental, social, and clinical psychology. Strong research methods and statistics emphasis.",
+      "year_breakdown": {
+        "year_1": ["PSYC200", "PSYC201", "STAT213"],
+        "year_2": ["PSYC203", "PSYC204", "PSYC300", "PSYC301"],
+        "year_3": ["PSYC305", "PSYC321", "PSYC349", "PSYC352", "PSYC365"],
+        "year_4": ["PSYC492", "PSYC493", "PSYC495", "PSYC499.01"]
+      },
+      "core_required": [
+        "PSYC200",
+        "PSYC201",
+        "PSYC203",
+        "PSYC204",
+        "PSYC300",
+        "PSYC301",
+        "PSYC305",
+        "STAT213"
+      ],
+      "depth_courses": [
+        "PSYC321",
+        "PSYC345",
+        "PSYC349",
+        "PSYC352",
+        "PSYC365",
+        "PSYC369",
+        "PSYC373",
+        "PSYC375",
+        "PSYC383",
+        "PSYC385",
+        "PSYC391",
+        "PSYC393",
+        "PSYC405",
+        "PSYC407",
+        "PSYC411",
+        "PSYC412",
+        "PSYC415",
+        "PSYC425",
+        "PSYC427",
+        "PSYC431",
+        "PSYC433",
+        "PSYC435",
+        "PSYC437",
+        "PSYC439",
+        "PSYC442",
+        "PSYC443",
+        "PSYC444"
+      ],
+      "elective_areas": [
+        "Clinical & Counselling Psychology",
+        "Cognitive Psychology",
+        "Developmental Psychology",
+        "Social Psychology",
+        "Biological Psychology (Neuroscience)",
+        "Industrial/Organizational Psychology",
+        "Research Methods & Statistics"
+      ],
+      "general_requirements": {
+        "credits_required": 120,
+        "upper_division_min": 48,
+        "research_requirement": "PSYC300 (Research Methods) and PSYC301 (Statistics for Psychology) are required before any 400-level courses",
+        "capstone": "PSYC492 or PSYC493 Undergraduate Thesis highly recommended for grad school",
+        "notes": "BSc stream requires more science and statistics electives than BA stream. Students interested in grad school should complete a thesis (PSYC492/493)."
+      },
+      "typical_prereq_chains": [
+        {
+          "chain_name": "Research Methods Core",
+          "courses": ["PSYC200", "PSYC201", "PSYC300", "PSYC301", "PSYC305"]
+        },
+        {
+          "chain_name": "Clinical Stream",
+          "courses": ["PSYC200", "PSYC203", "PSYC352", "PSYC365", "PSYC411"]
+        },
+        {
+          "chain_name": "Neuroscience Stream",
+          "courses": ["PSYC200", "PSYC204", "PSYC321", "PSYC373", "PSYC383"]
+        }
+      ]
+    }
+  ],
+  "grading_scale": {
+    "A+": 4.0,
+    "A":  4.0,
+    "A-": 3.7,
+    "B+": 3.3,
+    "B":  3.0,
+    "B-": 2.7,
+    "C+": 2.3,
+    "C":  2.0,
+    "C-": 1.7,
+    "D+": 1.3,
+    "D":  1.0,
+    "F":  0.0
+  },
+  "grading_scale_display": [
+    { "letter": "A+", "points": 4.0, "percentage": "95–100" },
+    { "letter": "A",  "points": 4.0, "percentage": "90–94"  },
+    { "letter": "A-", "points": 3.7, "percentage": "85–89"  },
+    { "letter": "B+", "points": 3.3, "percentage": "80–84"  },
+    { "letter": "B",  "points": 3.0, "percentage": "75–79"  },
+    { "letter": "B-", "points": 2.7, "percentage": "70–74"  },
+    { "letter": "C+", "points": 2.3, "percentage": "65–69"  },
+    { "letter": "C",  "points": 2.0, "percentage": "60–64"  },
+    { "letter": "C-", "points": 1.7, "percentage": "55–59"  },
+    { "letter": "D+", "points": 1.3, "percentage": "50–54"  },
+    { "letter": "D",  "points": 1.0, "percentage": "45–49"  },
+    { "letter": "F",  "points": 0.0, "percentage": "0–44"   }
+  ],
+  "metadata": {
+    "source": "University of Calgary Academic Calendar 2025-2026",
+    "course_count": 5569,
+    "programs_count": 5,
+    "last_updated": "2026-05-23",
+    "notes": "Program requirements are representative of typical degree paths. Always verify with UCalgary Academic Calendar for official requirements."
+  }
+}

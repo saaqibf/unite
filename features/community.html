@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Hub — UNite</title>
+  <link rel="icon" type="image/svg+xml" href="/css/favicon.svg">
+  <link rel="stylesheet" href="/css/unite-design-system.css">
+  <link rel="stylesheet" href="/css/community.css">
+  <script>
+    window.PUSHER_KEY = 'e141d55774c2523e18f3';
+    window.PUSHER_CLUSTER = 'mt1';
+  </script>
+  <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
+  <script src="/js/unite-nav.js"></script>
+</head>
+<body class="community-page">
+  <script>injectNav('community');</script>
+
+  <div class="community-layout">
+    <div class="community-tabs">
+      <button class="community-tab community-tab--active" data-tab="events">Events</button>
+      <button class="community-tab" data-tab="chat">Group Chat</button>
+    </div>
+
+    <section class="community-feed" id="community-feed">
+      <div class="community-actions" id="community-actions">
+        <button type="button" class="btn-primary btn-sm" id="post-club-btn">+ Club Event</button>
+        <select id="filter-activity" class="input-field" style="width:auto;max-width:10rem" aria-label="Filter by activity">
+          <option value="">All activities</option>
+          <option value="Soccer">Soccer</option>
+          <option value="Basketball">Basketball</option>
+          <option value="Volleyball">Volleyball</option>
+          <option value="Running">Running</option>
+          <option value="Gaming">Gaming</option>
+          <option value="Other">Other</option>
+        </select>
+        <button type="button" class="btn-secondary btn-sm community-actions__admin" id="admin-verified-toggle">
+          <span id="admin-verified-label">Demo: Verify Club (off)</span>
+        </button>
+      </div>
+
+      <div class="community-section">
+        <h2 class="community-section__title text-display">Club Newsletter</h2>
+        <p class="community-section__sub text-muted">Verified clubs only — gold checkmark badge</p>
+        <div id="club-feed" class="feed-cards" aria-live="polite"></div>
+      </div>
+
+      <div class="community-section">
+        <h2 class="community-section__title text-display">Sports &amp; Hobbies — Pull Up</h2>
+        <div id="sports-feed" class="feed-cards" aria-live="polite"></div>
+
+        <form id="sports-post-form" class="sports-post-form card card--flat">
+          <h3 class="sports-post-form__heading">Post a Pull Up Event</h3>
+          <div class="input-group">
+            <label class="input-label" for="sport-activity">Activity name</label>
+            <input type="text" id="sport-activity" class="input-field" required placeholder="e.g. Pickup Soccer">
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="sport-date">Date</label>
+            <input type="date" id="sport-date" class="input-field" required>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="sport-time">Time</label>
+            <input type="time" id="sport-time" class="input-field" required>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="sport-location">Location</label>
+            <input type="text" id="sport-location" class="input-field" required value="UCalgary campus">
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="sport-spots">Spots available</label>
+            <input type="number" id="sport-spots" class="input-field" required min="1" max="20" value="10">
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="sport-skill">Skill level</label>
+            <select id="sport-skill" class="input-field" required>
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Any" selected>Any</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-primary btn-block">Post Event</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="community-chat-section" id="community-chat">
+      <div class="chat-panel">
+        <header class="chat-header">
+          <h2 class="text-display" style="font-size: 1.25rem;">Global Chat</h2>
+          <div class="chat-online">
+            <span class="chat-online__dot"></span>
+            <span id="chat-online-count">12 students online</span>
+          </div>
+        </header>
+
+        <div class="chat-messages" id="chat-messages" aria-live="polite"></div>
+
+        <form class="chat-input-bar" id="chat-form">
+          <label for="chat-input" class="sr-only">Type a message</label>
+          <input type="text" id="chat-input" class="input-field" placeholder="Say hi to your campus..." autocomplete="off">
+          <button type="submit" class="chat-send-btn" aria-label="Send message">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+          </button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-overlay" id="post-modal" role="dialog" aria-hidden="true">
+    <div class="modal-panel">
+      <div class="modal-panel__header">
+        <h2 class="modal-panel__title" id="post-modal-title">Club Newsletter Post</h2>
+        <button type="button" class="modal-close" data-close-modal="post-modal" aria-label="Close">&times;</button>
+      </div>
+      <form id="post-form">
+        <input type="hidden" id="post-type" value="club">
+        <div class="input-group">
+          <label class="input-label" for="post-org">Club name</label>
+          <input type="text" id="post-org" class="input-field" required placeholder="e.g. UCalgary Computer Science Society">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="post-title">Event name</label>
+          <input type="text" id="post-title" class="input-field" required>
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="post-date">Date</label>
+          <input type="text" id="post-date" class="input-field" required placeholder="e.g. Thu, May 29">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="post-time">Time</label>
+          <input type="text" id="post-time" class="input-field" required placeholder="e.g. 6:00 PM">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="post-location">Location</label>
+          <input type="text" id="post-location" class="input-field" required placeholder="e.g. ICT 121">
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="post-description">Description</label>
+          <textarea id="post-description" class="input-field" rows="3" required></textarea>
+        </div>
+        <button type="submit" class="btn-primary btn-block">Post</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    window.UNITE_CHAT_CONFIG = {
+      pusherKey: window.PUSHER_KEY || '',
+      pusherCluster: window.PUSHER_CLUSTER || 'mt1',
+      onlineCount: 12,
+      currentUser: { name: 'Primel J.', program: 'CS · Y2' },
+      seedMessages: [
+        { user: 'Sarah C.', program: 'CS · Y1', text: 'Anyone taking CPSC 331 next semester?', timestamp: '2026-05-23T18:02:00Z' },
+        { user: 'Marcus T.', program: 'ENGG · Y3', text: 'Yeah! Heard the prof is tough but fair.', timestamp: '2026-05-23T18:04:00Z' },
+        { user: 'Priya K.', program: 'BUS · Y2', text: 'Is the CS Society hackathon prep still on Thursday?', timestamp: '2026-05-23T18:06:00Z' },
+        { user: 'Richard H.', program: 'CS · Y2', text: 'Yep — ICT 121 at 6pm. Pizza included 🍕', timestamp: '2026-05-23T18:08:00Z' }
+      ]
+    };
+  </script>
+  <script src="/js/chat.js"></script>
+  <script src="/js/community.js"></script>
+</body>
+</html>
